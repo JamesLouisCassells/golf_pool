@@ -15,10 +15,10 @@ Get the skeleton in place before writing any real logic.
 - [ ] Invite collaborator, agree on branch strategy (main + feature branches)
 
 ### Go backend scaffold
-- [ ] `go mod init`, install `chi`, `pgx`, `golang-jwt`
-- [ ] `main.go`: HTTP server, health endpoint `GET /healthz`
-- [ ] Set up `internal/` package structure: `api/`, `auth/`, `db/`, `golf/`, `admin/`
-- [ ] `Dockerfile` for backend (Alpine)
+- [x] `go mod init`, install `chi`, `pgx`, `golang-jwt`
+- [x] `main.go`: HTTP server, health endpoint `GET /healthz`
+- [x] Set up `internal/` package structure: `api/`, `auth/`, `db/`, `golf/`, `admin/`
+- [x] `Dockerfile` for backend (Alpine)
 
 ### Vue frontend scaffold
 - [ ] `npm create vite@latest` with Vue template
