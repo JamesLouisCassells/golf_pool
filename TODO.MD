@@ -39,11 +39,11 @@ Get the skeleton in place before writing any real logic.
 ## Phase 2 — Database & Auth
 
 ### Postgres + migrations
-- [ ] Install `golang-migrate` CLI
-- [ ] Migration 001: create `users` table
-- [ ] Migration 002: create `entries` table
-- [ ] Migration 003: create `tournament_config` table
-- [ ] Add DB connection pool to Go (`pgxpool`), log success on startup
+- [x] Install `golang-migrate` CLI
+- [x] Migration 001: create `users` table
+- [x] Migration 002: create `entries` table
+- [x] Migration 003: create `tournament_config` table
+- [x] Add DB connection pool to Go (`pgxpool`), log success on startup
 - [ ] Write `db/` package with typed query functions (`GetUser`, `CreateEntry`, `GetConfig`, etc.)
 
 ### Clerk auth
@@ -61,7 +61,7 @@ Get the skeleton in place before writing any real logic.
 
 ### Tournament config
 - [ ] Seed `tournament_config` for the active year (migration or admin endpoint)
-- [ ] `GET /api/config/:year` — return group definitions, player lists, deadline
+- [x] `GET /api/config/:year` — return group definitions, player lists, deadline
 - [ ] Admin page: form to view and edit config (deadline, multipliers, pool payouts, FRL winner)
 - [ ] `PUT /api/admin/config/:year` — save config changes
 
