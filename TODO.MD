@@ -9,10 +9,10 @@ Work through these phases in order. Each phase should leave the app in a working
 Get the skeleton in place before writing any real logic.
 
 ### Repo & tooling
-- [ ] Create new GitHub repo
-- [ ] Set up directory structure: `/backend`, `/frontend`, `/deploy`
-- [ ] Add `.gitignore`, `.env.example`, `README.md`
-- [ ] Invite collaborator, agree on branch strategy (main + feature branches)
+- [x] Create new GitHub repo
+- [x] Set up directory structure: `/backend`, `/frontend`, `/deploy`
+- [x] Add `.gitignore`, `.env.example`, `README.md`
+- [x] Invite collaborator, agree on branch strategy (main + feature branches)
 
 ### Go backend scaffold
 - [x] `go mod init`, install `chi`, `pgx`, `golang-jwt`
