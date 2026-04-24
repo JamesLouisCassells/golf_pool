@@ -1,0 +1,29 @@
+# macOS / editor noise
+.DS_Store
+.idea/
+*.swp
+*.swo
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Build artifacts
+backend/api
+backend/bin/
+coverage.out
+
+# Frontend build artifacts and dependencies
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
