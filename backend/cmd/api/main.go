@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/JamesLouisCassells/golf_pool/backend/internal/api"
+	"github.com/JamesLouisCassells/golf_pool/backend/internal/auth"
 	"github.com/JamesLouisCassells/golf_pool/backend/internal/config"
 	"github.com/JamesLouisCassells/golf_pool/backend/internal/db"
 )
@@ -28,9 +29,19 @@ func main() {
 	defer dbPool.Close()
 
 	store := db.NewStore(dbPool)
-	router := api.NewRouter(store)
+	authMiddleware := auth.NewMiddleware(store, auth.Config{
+		JWKSURL:    cfg.ClerkJWKSURL,
+		Issuer:     cfg.ClerkIssuer,
+		Audience:   cfg.ClerkAudience,
+		AdminClaim: cfg.AdminClaim,
+		AdminValue: cfg.AdminValue,
+	})
+	router := api.NewRouter(store, authMiddleware)
 
 	log.Printf("connected to postgres")
+	if cfg.ClerkJWKSURL == "" {
+		log.Printf("auth middleware is unconfigured: protected routes will return 503 until CLERK_JWKS_URL is set")
+	}
 	log.Printf("starting api on %s", cfg.HTTPAddr)
 
 	if err := http.ListenAndServe(cfg.HTTPAddr, router); err != nil {

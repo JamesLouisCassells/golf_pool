@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/JamesLouisCassells/golf_pool/backend/internal/auth"
 	"github.com/JamesLouisCassells/golf_pool/backend/internal/db"
 
 	"github.com/go-chi/chi/v5"
@@ -17,12 +18,13 @@ type Handler struct {
 // NewRouter wires the HTTP surface for the API.
 // Keeping route setup in one place makes it easier to see what the server
 // exposes today and where new handlers should be added later.
-func NewRouter(store *db.Store) http.Handler {
+func NewRouter(store *db.Store, authMiddleware *auth.Middleware) http.Handler {
 	h := Handler{store: store}
 	r := chi.NewRouter()
 
 	r.Get("/healthz", h.healthz)
 	r.Get("/api/config/{year}", h.getConfig)
+	r.With(authMiddleware.RequireAuth).Get("/api/me", h.me)
 
 	return r
 }
@@ -60,6 +62,20 @@ func (h Handler) getConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewEncoder(w).Encode(cfg); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
+}
+
+func (h Handler) me(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	user, ok := auth.CurrentUser(r.Context())
+	if !ok {
+		http.Error(w, "authenticated user missing from context", http.StatusInternalServerError)
+		return
+	}
+
+	if err := json.NewEncoder(w).Encode(user); err != nil {
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 	}
 }

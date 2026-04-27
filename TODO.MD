@@ -9,10 +9,10 @@ Work through these phases in order. Each phase should leave the app in a working
 Get the skeleton in place before writing any real logic.
 
 ### Repo & tooling
-- [ ] Create new GitHub repo
-- [ ] Set up directory structure: `/backend`, `/frontend`, `/deploy`
-- [ ] Add `.gitignore`, `.env.example`, `README.md`
-- [ ] Invite collaborator, agree on branch strategy (main + feature branches)
+- [x] Create new GitHub repo
+- [x] Set up directory structure: `/backend`, `/frontend`, `/deploy`
+- [x] Add `.gitignore`, `.env.example`, `README.md`
+- [x] Invite collaborator, agree on branch strategy (main + feature branches)
 
 ### Go backend scaffold
 - [x] `go mod init`, install `chi`, `pgx`, `golang-jwt`
@@ -21,7 +21,7 @@ Get the skeleton in place before writing any real logic.
 - [x] `Dockerfile` for backend (Alpine)
 
 ### Vue frontend scaffold
-- [ ] `npm create vite@latest` with Vue template
+- [x] `npm create vite@latest` with Vue template
 - [ ] Install Tailwind CSS, Vue Router, Clerk Vue SDK
 - [ ] Stub out views: `Home`, `Standings`, `Enter`, `Entries`, `Admin`
 - [ ] Set up `router/index.js` with routes for each view
@@ -44,16 +44,17 @@ Get the skeleton in place before writing any real logic.
 - [x] Migration 002: create `entries` table
 - [x] Migration 003: create `tournament_config` table
 - [x] Add DB connection pool to Go (`pgxpool`), log success on startup
-- [ ] Write `db/` package with typed query functions (`GetUser`, `CreateEntry`, `GetConfig`, etc.)
+- [x] Add typed config and user queries in `db/` (`GetConfig`, `GetUser`, `UpsertUser`)
+- [ ] Add remaining typed query functions (`CreateEntry`, entry lookup/update, config update, standings reads)
 
 ### Clerk auth
 - [ ] Create Clerk account, set up application, enable Google + email/password providers
 - [ ] Add Clerk publishable key and secret key to `.env`
-- [ ] Write `auth/` middleware: fetch Clerk JWKS and validate JWT on incoming requests
+- [x] Write initial `auth/` middleware: fetch Clerk JWKS and validate JWT on incoming requests
 - [ ] Write `requireAdmin` middleware: check for admin role claim in token
-- [ ] Test: hit a protected route with a valid token, confirm `401` without one
+- [ ] Test end-to-end with a real valid token; protected route already returns `401` without one
 - [ ] Add Clerk Vue SDK to frontend — implement login/logout, expose auth state app-wide
-- [ ] On first login, upsert a `users` row using the Clerk user ID and email
+- [x] On authenticated API requests, upsert a `users` row using the Clerk user ID and email
 
 ---
 
