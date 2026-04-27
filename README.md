@@ -64,8 +64,9 @@ The backend currently expects:
 
 - `HTTP_ADDR`
 - `DATABASE_URL`
+- `CLERK_JWKS_URL` for protected API routes
 
-Clerk keys are included in `.env.example` now so the repo is ready for upcoming auth work, but the auth middleware is not implemented yet.
+Clerk-related values are included in `.env.example`. The backend now has auth scaffolding for protected routes, but it still needs real Clerk app values before token validation will work end-to-end.
 
 ## Running the Backend
 
@@ -125,6 +126,25 @@ npm run dev
 ```
 
 The frontend is not yet integrated with the backend API in a meaningful way.
+
+## Current Auth Slice
+
+The first protected backend route now exists:
+
+- `GET /api/me`
+
+What it does today:
+
+- requires a bearer token
+- validates RS256 JWT signatures against Clerk JWKS
+- upserts the local `users` row from token claims
+- returns the local user record plus `is_admin`
+
+What is still incomplete:
+
+- no frontend Clerk integration yet
+- no admin-only middleware yet
+- no local script in the repo yet for generating a real dev token flow
 
 ## Learning Notes
 

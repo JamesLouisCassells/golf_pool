@@ -18,6 +18,13 @@ type Store struct {
 	pool *pgxpool.Pool
 }
 
+type User struct {
+	ClerkID     string    `json:"clerk_id"`
+	Email       string    `json:"email"`
+	DisplayName *string   `json:"display_name"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
 // TournamentConfig mirrors the fields the frontend will need from the
 // tournament_config table. JSONB columns are decoded into generic maps for now
 // so the API can return flexible year-to-year configuration data.
@@ -57,6 +64,64 @@ func NewPool(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
 
 func NewStore(pool *pgxpool.Pool) *Store {
 	return &Store{pool: pool}
+}
+
+// GetUser returns the local user record tied to a Clerk user ID.
+// Keeping this in the store lets handlers ask for a user in domain terms
+// instead of repeating SQL every time we need identity data.
+func (s *Store) GetUser(ctx context.Context, clerkID string) (User, error) {
+	const query = `
+		SELECT clerk_id, email, display_name, created_at
+		FROM users
+		WHERE clerk_id = $1
+	`
+
+	var user User
+
+	err := s.pool.QueryRow(ctx, query, clerkID).Scan(
+		&user.ClerkID,
+		&user.Email,
+		&user.DisplayName,
+		&user.CreatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return User{}, ErrNotFound
+		}
+
+		return User{}, fmt.Errorf("get user %s: %w", clerkID, err)
+	}
+
+	return user, nil
+}
+
+// UpsertUser creates or refreshes the local user record from the identity
+// provider claims. This gives us a single place to keep user basics in sync
+// whenever an authenticated request reaches the API.
+func (s *Store) UpsertUser(ctx context.Context, clerkID, email string, displayName *string) (User, error) {
+	const query = `
+		INSERT INTO users (clerk_id, email, display_name)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (clerk_id)
+		DO UPDATE SET
+			email = EXCLUDED.email,
+			display_name = EXCLUDED.display_name
+		RETURNING clerk_id, email, display_name, created_at
+	`
+
+	var user User
+
+	err := s.pool.QueryRow(ctx, query, clerkID, email, displayName).Scan(
+		&user.ClerkID,
+		&user.Email,
+		&user.DisplayName,
+		&user.CreatedAt,
+	)
+	if err != nil {
+		return User{}, fmt.Errorf("upsert user %s: %w", clerkID, err)
+	}
+
+	return user, nil
 }
 
 // GetConfig returns the tournament configuration row for a given year.
