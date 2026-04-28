@@ -30,11 +30,15 @@ func main() {
 
 	store := db.NewStore(dbPool)
 	authMiddleware := auth.NewMiddleware(store, auth.Config{
-		JWKSURL:    cfg.ClerkJWKSURL,
-		Issuer:     cfg.ClerkIssuer,
-		Audience:   cfg.ClerkAudience,
-		AdminClaim: cfg.AdminClaim,
-		AdminValue: cfg.AdminValue,
+		JWKSURL:           cfg.ClerkJWKSURL,
+		Issuer:            cfg.ClerkIssuer,
+		Audience:          cfg.ClerkAudience,
+		SecretKey:         cfg.ClerkSecretKey,
+		AuthorizedParties: cfg.ClerkAuthorizedParties,
+		EmailClaim:        cfg.ClerkEmailClaim,
+		NameClaim:         cfg.ClerkNameClaim,
+		AdminClaim:        cfg.AdminClaim,
+		AdminValue:        cfg.AdminValue,
 	})
 	router := api.NewRouter(store, authMiddleware)
 
