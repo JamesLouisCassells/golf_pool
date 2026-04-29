@@ -9,8 +9,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"math/big"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -19,12 +21,15 @@ import (
 )
 
 type Config struct {
-	JWKSURL  string
-	Issuer   string
-	Audience string
-
-	AdminClaim string
-	AdminValue string
+	JWKSURL           string
+	Issuer            string
+	Audience          string
+	SecretKey         string
+	AuthorizedParties []string
+	EmailClaim        string
+	NameClaim         string
+	AdminClaim        string
+	AdminValue        string
 }
 
 type Middleware struct {
@@ -54,16 +59,31 @@ type tokenHeader struct {
 
 type tokenClaims struct {
 	Subject string `json:"sub"`
-	Email   string `json:"email"`
-	Name    string `json:"name"`
 
 	Issuer    string        `json:"iss"`
 	Audience  audienceClaim `json:"aud"`
 	Expiry    numericDate   `json:"exp"`
 	NotBefore *numericDate  `json:"nbf,omitempty"`
+	AZP       string        `json:"azp,omitempty"`
+	Status    string        `json:"sts,omitempty"`
 
 	Raw map[string]any `json:"-"`
 }
+
+type clerkUserResponse struct {
+	ID                    string              `json:"id"`
+	FirstName             *string             `json:"first_name"`
+	LastName              *string             `json:"last_name"`
+	PrimaryEmailAddressID *string             `json:"primary_email_address_id"`
+	EmailAddresses        []clerkEmailAddress `json:"email_addresses"`
+}
+
+type clerkEmailAddress struct {
+	ID           string `json:"id"`
+	EmailAddress string `json:"email_address"`
+}
+
+var clerkAPIBaseURL = "https://api.clerk.com/v1"
 
 type numericDate time.Time
 
@@ -125,9 +145,9 @@ func NewMiddleware(store *db.Store, cfg Config) *Middleware {
 // and attaches the authenticated user to the request context.
 func (m *Middleware) RequireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		token := bearerToken(r.Header.Get("Authorization"))
+		token := sessionTokenFromRequest(r)
 		if token == "" {
-			http.Error(w, "missing bearer token", http.StatusUnauthorized)
+			http.Error(w, "missing session token", http.StatusUnauthorized)
 			return
 		}
 
@@ -150,6 +170,31 @@ func (m *Middleware) RequireAuth(next http.Handler) http.Handler {
 func CurrentUser(ctx context.Context) (User, bool) {
 	user, ok := ctx.Value(userContextKey).(User)
 	return user, ok
+}
+
+// WithUser attaches an already-authenticated user to a context. This keeps
+// tests and future middleware composition from needing to duplicate the
+// package's private context key details.
+func WithUser(ctx context.Context, user User) context.Context {
+	return context.WithValue(ctx, userContextKey, user)
+}
+
+// RequireAdmin builds on RequireAuth and then enforces the derived admin flag.
+func (m *Middleware) RequireAdmin(next http.Handler) http.Handler {
+	return m.RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user, ok := CurrentUser(r.Context())
+		if !ok {
+			http.Error(w, "authenticated user missing from context", http.StatusInternalServerError)
+			return
+		}
+
+		if !user.IsAdmin {
+			http.Error(w, "admin access required", http.StatusForbidden)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	}))
 }
 
 func (m *Middleware) authenticate(ctx context.Context, token string) (User, error) {
@@ -183,12 +228,12 @@ func (m *Middleware) authenticate(ctx context.Context, token string) (User, erro
 		return User{}, errors.New("token is missing subject")
 	}
 
-	if claims.Email == "" {
-		return User{}, errors.New("token is missing email")
+	email, displayName, err := m.resolveProfile(ctx, claims)
+	if err != nil {
+		return User{}, err
 	}
 
-	displayName := optionalString(claims.Name)
-	record, err := m.store.UpsertUser(ctx, claims.Subject, claims.Email, displayName)
+	record, err := m.store.UpsertUser(ctx, claims.Subject, email, displayName)
 	if err != nil {
 		return User{}, fmt.Errorf("sync local user: %w", err)
 	}
@@ -216,6 +261,14 @@ func (m *Middleware) validateClaims(claims tokenClaims) error {
 
 	if m.config.Audience != "" && !claims.Audience.Contains(m.config.Audience) {
 		return errors.New("token audience mismatch")
+	}
+
+	if len(m.config.AuthorizedParties) > 0 && claims.AZP != "" && !containsString(m.config.AuthorizedParties, claims.AZP) {
+		return errors.New("token authorized party mismatch")
+	}
+
+	if claims.Status == "pending" {
+		return errors.New("token session status is pending")
 	}
 
 	return nil
@@ -253,6 +306,36 @@ func (m *Middleware) isAdmin(claims map[string]any) bool {
 	}
 
 	return false
+}
+
+func (m *Middleware) resolveProfile(ctx context.Context, claims tokenClaims) (string, *string, error) {
+	email, _ := claimString(claims.Raw, m.config.EmailClaim)
+	name, _ := claimString(claims.Raw, m.config.NameClaim)
+	displayName := optionalString(name)
+
+	if email != "" {
+		return email, displayName, nil
+	}
+
+	if m.config.SecretKey == "" {
+		return "", nil, errors.New("token is missing email claim and CLERK_SECRET_KEY is not set for Clerk user lookup")
+	}
+
+	profile, err := m.fetchUserProfile(ctx, claims.Subject)
+	if err != nil {
+		return "", nil, err
+	}
+
+	email = profile.primaryEmail()
+	if email == "" {
+		return "", nil, errors.New("clerk user profile did not include a primary email address")
+	}
+
+	if displayName == nil {
+		displayName = optionalString(profile.displayName())
+	}
+
+	return email, displayName, nil
 }
 
 func (m *Middleware) lookupKey(ctx context.Context, kid string) (*rsa.PublicKey, error) {
@@ -319,6 +402,38 @@ func (m *Middleware) fetchKeys(ctx context.Context) (map[string]*rsa.PublicKey, 
 	m.mu.Unlock()
 
 	return keys, nil
+}
+
+func (m *Middleware) fetchUserProfile(ctx context.Context, userID string) (clerkUserResponse, error) {
+	if userID == "" {
+		return clerkUserResponse{}, errors.New("cannot fetch clerk user profile without user id")
+	}
+
+	baseURL := strings.TrimRight(clerkAPIBaseURL, "/") + "/users/" + url.PathEscape(userID)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL, nil)
+	if err != nil {
+		return clerkUserResponse{}, fmt.Errorf("build clerk user request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "Bearer "+m.config.SecretKey)
+
+	resp, err := m.httpClient.Do(req)
+	if err != nil {
+		return clerkUserResponse{}, fmt.Errorf("fetch clerk user: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
+		return clerkUserResponse{}, fmt.Errorf("fetch clerk user: unexpected status %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+
+	var profile clerkUserResponse
+	if err := json.NewDecoder(resp.Body).Decode(&profile); err != nil {
+		return clerkUserResponse{}, fmt.Errorf("decode clerk user: %w", err)
+	}
+
+	return profile, nil
 }
 
 func parseToken(token string) (tokenHeader, tokenClaims, string, []byte, error) {
@@ -390,6 +505,18 @@ func parseRSAPublicKey(nValue, eValue string) (*rsa.PublicKey, error) {
 	}, nil
 }
 
+func sessionTokenFromRequest(r *http.Request) string {
+	if token := bearerToken(r.Header.Get("Authorization")); token != "" {
+		return token
+	}
+
+	if cookie, err := r.Cookie("__session"); err == nil {
+		return strings.TrimSpace(cookie.Value)
+	}
+
+	return ""
+}
+
 func bearerToken(header string) string {
 	const prefix = "Bearer "
 
@@ -407,4 +534,62 @@ func optionalString(value string) *string {
 	}
 
 	return &value
+}
+
+func claimString(claims map[string]any, key string) (string, bool) {
+	if key == "" {
+		return "", false
+	}
+
+	value, ok := claims[key]
+	if !ok {
+		return "", false
+	}
+
+	text, ok := value.(string)
+	if !ok {
+		return "", false
+	}
+
+	return strings.TrimSpace(text), true
+}
+
+func containsString(values []string, target string) bool {
+	for _, value := range values {
+		if value == target {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (u clerkUserResponse) primaryEmail() string {
+	if u.PrimaryEmailAddressID != nil {
+		for _, email := range u.EmailAddresses {
+			if email.ID == *u.PrimaryEmailAddressID {
+				return strings.TrimSpace(email.EmailAddress)
+			}
+		}
+	}
+
+	for _, email := range u.EmailAddresses {
+		if strings.TrimSpace(email.EmailAddress) != "" {
+			return strings.TrimSpace(email.EmailAddress)
+		}
+	}
+
+	return ""
+}
+
+func (u clerkUserResponse) displayName() string {
+	parts := []string{}
+	if u.FirstName != nil && strings.TrimSpace(*u.FirstName) != "" {
+		parts = append(parts, strings.TrimSpace(*u.FirstName))
+	}
+	if u.LastName != nil && strings.TrimSpace(*u.LastName) != "" {
+		parts = append(parts, strings.TrimSpace(*u.LastName))
+	}
+
+	return strings.Join(parts, " ")
 }

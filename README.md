@@ -66,7 +66,7 @@ The backend currently expects:
 - `DATABASE_URL`
 - `CLERK_JWKS_URL` for protected API routes
 
-Clerk-related values are included in `.env.example`. The backend now has auth scaffolding for protected routes, but it still needs real Clerk app values before token validation will work end-to-end.
+Clerk-related values are included in `.env.example`. The backend now has protected-route validation, but it still needs real Clerk app values before token validation will work end-to-end.
 
 ## Running the Backend
 
@@ -132,19 +132,52 @@ The frontend is not yet integrated with the backend API in a meaningful way.
 The first protected backend route now exists:
 
 - `GET /api/me`
+- `GET /api/entries/mine`
 
 What it does today:
 
-- requires a bearer token
+- accepts either a bearer token or the `__session` cookie
 - validates RS256 JWT signatures against Clerk JWKS
+- validates Clerk `azp` against configured allowed origins when present
 - upserts the local `users` row from token claims
+- falls back to the Clerk Backend API for the user profile if the session token does not include an email claim
 - returns the local user record plus `is_admin`
+- returns the authenticated user's entry for the active tournament year when one exists
 
 What is still incomplete:
 
 - no frontend Clerk integration yet
-- no admin-only middleware yet
-- no local script in the repo yet for generating a real dev token flow
+- no admin-only routes are wired yet, even though the initial admin middleware exists
+- no local helper exists yet for generating or capturing a dev token flow
+
+## Clerk Dev Setup
+
+To finish the real auth proof locally, create `.env` from `.env.example` and fill in these Clerk values from your development instance:
+
+- `CLERK_SECRET_KEY`
+- `CLERK_JWKS_URL`
+- `CLERK_ISSUER`
+- `CLERK_AUTHORIZED_PARTIES`
+
+Optional values:
+
+- `CLERK_EMAIL_CLAIM`
+- `CLERK_NAME_CLAIM`
+- `CLERK_ADMIN_CLAIM`
+- `CLERK_ADMIN_VALUE`
+
+Important:
+
+- Clerk's default session token claims include `sub`, `iss`, `exp`, `nbf`, and often `azp`, but not `email` by default.
+- If you want email and display name to come directly from the token, add custom session token claims in Clerk that match `CLERK_EMAIL_CLAIM` and `CLERK_NAME_CLAIM`.
+- If you do not add those claims, the backend will use `CLERK_SECRET_KEY` to fetch the user profile from Clerk's Backend API after token verification.
+
+Suggested local proof steps:
+
+1. Run the backend with your real Clerk values.
+2. Sign in through the frontend once Clerk is wired, or manually capture a valid session token from your Clerk dev app.
+3. Call `GET /api/me` with either the `Authorization: Bearer <token>` header or the `__session` cookie.
+4. Confirm the `users` row is inserted or updated in Postgres.
 
 ## Learning Notes
 

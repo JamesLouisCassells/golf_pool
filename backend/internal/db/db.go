@@ -25,6 +25,18 @@ type User struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+type Entry struct {
+	ID          string         `json:"id"`
+	Year        int            `json:"year"`
+	ClerkID     *string        `json:"clerk_id"`
+	DisplayName string         `json:"display_name"`
+	Picks       map[string]any `json:"picks"`
+	InOvers     bool           `json:"in_overs"`
+	Locked      bool           `json:"locked"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+}
+
 // TournamentConfig mirrors the fields the frontend will need from the
 // tournament_config table. JSONB columns are decoded into generic maps for now
 // so the API can return flexible year-to-year configuration data.
@@ -122,6 +134,61 @@ func (s *Store) UpsertUser(ctx context.Context, clerkID, email string, displayNa
 	}
 
 	return user, nil
+}
+
+// GetMyEntry returns the authenticated user's entry for the currently active
+// tournament year. Joining through tournament_config keeps "current year"
+// logic in one place instead of pushing that rule into handlers.
+func (s *Store) GetMyEntry(ctx context.Context, clerkID string) (Entry, error) {
+	const query = `
+		SELECT
+			e.id::text,
+			e.year,
+			e.clerk_id,
+			e.display_name,
+			e.picks,
+			e.in_overs,
+			e.locked,
+			e.created_at,
+			e.updated_at
+		FROM entries e
+		INNER JOIN tournament_config tc
+			ON tc.year = e.year
+		WHERE e.clerk_id = $1
+			AND tc.active = true
+		ORDER BY e.updated_at DESC
+		LIMIT 1
+	`
+
+	var entry Entry
+	var picksRaw []byte
+
+	err := s.pool.QueryRow(ctx, query, clerkID).Scan(
+		&entry.ID,
+		&entry.Year,
+		&entry.ClerkID,
+		&entry.DisplayName,
+		&picksRaw,
+		&entry.InOvers,
+		&entry.Locked,
+		&entry.CreatedAt,
+		&entry.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return Entry{}, ErrNotFound
+		}
+
+		return Entry{}, fmt.Errorf("get active entry for user %s: %w", clerkID, err)
+	}
+
+	if len(picksRaw) > 0 {
+		if err := json.Unmarshal(picksRaw, &entry.Picks); err != nil {
+			return Entry{}, fmt.Errorf("decode entry picks json: %w", err)
+		}
+	}
+
+	return entry, nil
 }
 
 // GetConfig returns the tournament configuration row for a given year.

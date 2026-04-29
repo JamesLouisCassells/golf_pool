@@ -51,8 +51,8 @@ Get the skeleton in place before writing any real logic.
 - [ ] Create Clerk account, set up application, enable Google + email/password providers
 - [ ] Add Clerk publishable key and secret key to `.env`
 - [x] Write initial `auth/` middleware: fetch Clerk JWKS and validate JWT on incoming requests
-- [ ] Write `requireAdmin` middleware: check for admin role claim in token
-- [ ] Test end-to-end with a real valid token; protected route already returns `401` without one
+- [x] Write initial `requireAdmin` middleware: check for admin role claim in token
+- [ ] Test end-to-end with a real valid Clerk token and confirm local `users` upsert
 - [ ] Add Clerk Vue SDK to frontend — implement login/logout, expose auth state app-wide
 - [x] On authenticated API requests, upsert a `users` row using the Clerk user ID and email
 
@@ -69,7 +69,7 @@ Get the skeleton in place before writing any real logic.
 ### Entry creation & editing
 - [ ] `POST /api/entries` — create entry, enforce deadline check
 - [ ] `PUT /api/entries/:id` — edit own entry, enforce deadline + ownership check
-- [ ] `GET /api/entries/mine` — return my entry for the current year
+- [x] `GET /api/entries/mine` — return my entry for the current year
 - [ ] `Enter.vue`: form built dynamically from config groups, pre-filled if entry already exists
 - [ ] Show deadline countdown on the entry form
 - [ ] Disable form and show a locked message after deadline passes
