@@ -22,10 +22,11 @@ Get the skeleton in place before writing any real logic.
 
 ### Vue frontend scaffold
 - [x] `npm create vite@latest` with Vue template
-- [ ] Install Tailwind CSS, Vue Router, Clerk Vue SDK
-- [ ] Stub out views: `Home`, `Standings`, `Enter`, `Entries`, `Admin`
-- [ ] Set up `router/index.js` with routes for each view
-- [ ] `vite.config.js`: proxy `/api/*` to `localhost:8080` in dev
+- [ ] Install Tailwind CSS, Clerk Vue SDK
+- [x] Stub out views: `Entries`, `Admin`
+- [x] Stub out views: `Home`, `Standings`, `Enter`
+- [x] Set up `router/index.js` with routes for each view
+- [x] `vite.config.js`: proxy `/api/*` to `localhost:8080` in dev
 - [ ] `Dockerfile` for frontend (node build stage → nginx:alpine)
 - [ ] `nginx.conf`: serve static files, proxy `/api/*` to `localhost:8080`
 
@@ -45,7 +46,8 @@ Get the skeleton in place before writing any real logic.
 - [x] Migration 003: create `tournament_config` table
 - [x] Add DB connection pool to Go (`pgxpool`), log success on startup
 - [x] Add typed config and user queries in `db/` (`GetConfig`, `GetUser`, `UpsertUser`)
-- [ ] Add remaining typed query functions (`CreateEntry`, entry lookup/update, config update, standings reads)
+- [x] Add typed entry lifecycle and listing queries (`CreateEntry`, entry lookup/update, active-year list)
+- [ ] Add remaining typed query functions (`config update`, standings reads, admin entry operations)
 
 ### Clerk auth
 - [ ] Create Clerk account, set up application, enable Google + email/password providers
@@ -64,16 +66,17 @@ Get the skeleton in place before writing any real logic.
 ### Tournament config
 - [ ] Seed `tournament_config` for the active year (migration or admin endpoint)
 - [x] `GET /api/config/:year` — return group definitions, player lists, deadline
-- [ ] Admin page: form to view and edit config (deadline, multipliers, pool payouts, FRL winner)
-- [ ] `PUT /api/admin/config/:year` — save config changes
+- [x] Admin page: form to view and edit config (deadline, multipliers, pool payouts, FRL winner)
+- [x] `PUT /api/admin/config/:year` — save config changes
 
 ### Entry creation & editing
 - [x] `POST /api/entries` — create entry, enforce deadline check
-- [ ] `PUT /api/entries/:id` — edit own entry, enforce deadline + ownership check
+- [x] `PUT /api/entries/:id` — edit own entry, enforce deadline + ownership check
 - [x] `GET /api/entries/mine` — return my entry for the current year
-- [ ] `Enter.vue`: form built dynamically from config groups, pre-filled if entry already exists
-- [ ] Show deadline countdown on the entry form
-- [ ] Disable form and show a locked message after deadline passes
+- [x] `GET /api/entries` — public list after tournament start
+- [x] `Enter.vue`: form built dynamically from config groups, pre-filled if entry already exists
+- [x] Show deadline countdown on the entry form
+- [x] Disable form and show a locked message after deadline passes
 
 ### Golf scores + payout calculation
 - [ ] Port RapidAPI polling logic from Node.js to Go (`golf/` package)
@@ -126,7 +129,7 @@ Get the skeleton in place before writing any real logic.
 
 - [ ] Write a script to import 2024 and 2025 entries from existing CSVs into the DB
 - [ ] Verify historical standings pages render correctly for both years
-- [ ] `Entries.vue`: grid of all entries for the active year (visible after tournament starts)
+- [x] `Entries.vue`: grid of all entries for the active year (visible after tournament starts)
 - [ ] Navigation: consistent nav bar across all pages with login/logout state
 - [ ] Mobile responsive check on all pages
 - [ ] Basic error handling — friendly messages for API failures and loading states
