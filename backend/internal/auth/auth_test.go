@@ -129,6 +129,41 @@ func TestSessionTokenFromRequestFallsBackToSessionCookie(t *testing.T) {
 	}
 }
 
+func TestRequireAuthUsesMockUserWhenEnabled(t *testing.T) {
+	t.Parallel()
+
+	middleware := NewMiddleware(nil, Config{
+		MockEnabled: true,
+		MockClerkID: "dev-user",
+		MockEmail:   "dev@example.com",
+		MockName:    "Dev User",
+		MockAdmin:   true,
+	})
+
+	handler := middleware.RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user, ok := CurrentUser(r.Context())
+		if !ok {
+			t.Fatalf("expected user in context")
+		}
+		if user.Record.ClerkID != "dev-user" {
+			t.Fatalf("expected dev-user, got %s", user.Record.ClerkID)
+		}
+		if !user.IsAdmin {
+			t.Fatalf("expected mock user to be admin")
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	recorder := httptest.NewRecorder()
+
+	handler.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusNoContent {
+		t.Fatalf("expected status %d, got %d", http.StatusNoContent, recorder.Code)
+	}
+}
+
 func nowPlusSeconds(seconds int64) time.Time {
 	return time.Now().UTC().Add(time.Duration(seconds) * time.Second)
 }

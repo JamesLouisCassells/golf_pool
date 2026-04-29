@@ -52,6 +52,7 @@ Get the skeleton in place before writing any real logic.
 - [ ] Add Clerk publishable key and secret key to `.env`
 - [x] Write initial `auth/` middleware: fetch Clerk JWKS and validate JWT on incoming requests
 - [x] Write initial `requireAdmin` middleware: check for admin role claim in token
+- [x] Add temporary mock auth mode so protected routes can be developed before Clerk is fully wired
 - [ ] Test end-to-end with a real valid Clerk token and confirm local `users` upsert
 - [ ] Add Clerk Vue SDK to frontend — implement login/logout, expose auth state app-wide
 - [x] On authenticated API requests, upsert a `users` row using the Clerk user ID and email
@@ -67,7 +68,7 @@ Get the skeleton in place before writing any real logic.
 - [ ] `PUT /api/admin/config/:year` — save config changes
 
 ### Entry creation & editing
-- [ ] `POST /api/entries` — create entry, enforce deadline check
+- [x] `POST /api/entries` — create entry, enforce deadline check
 - [ ] `PUT /api/entries/:id` — edit own entry, enforce deadline + ownership check
 - [x] `GET /api/entries/mine` — return my entry for the current year
 - [ ] `Enter.vue`: form built dynamically from config groups, pre-filled if entry already exists

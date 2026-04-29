@@ -55,6 +55,7 @@ type TournamentConfig struct {
 }
 
 var ErrNotFound = errors.New("not found")
+var ErrConflict = errors.New("conflict")
 
 // NewPool creates the shared Postgres connection pool for the application.
 // Using a pool from the start matches how the app will behave in production
@@ -191,6 +192,112 @@ func (s *Store) GetMyEntry(ctx context.Context, clerkID string) (Entry, error) {
 	return entry, nil
 }
 
+// GetActiveConfig returns the config row for the tournament year currently
+// marked active. This is the config entry routes should use when operating on
+// the live pool instead of requiring clients to supply a year separately.
+func (s *Store) GetActiveConfig(ctx context.Context) (TournamentConfig, error) {
+	const query = `
+		SELECT
+			year,
+			entry_deadline,
+			start_date,
+			end_date,
+			groups,
+			mutt_multiplier::text,
+			old_mutt_multiplier::text,
+			pool_payouts,
+			frl_winner,
+			frl_payout,
+			active
+		FROM tournament_config
+		WHERE active = true
+		ORDER BY year DESC
+		LIMIT 1
+	`
+
+	return s.getConfigByQuery(ctx, query)
+}
+
+type CreateEntryParams struct {
+	Year        int
+	ClerkID     string
+	DisplayName string
+	Picks       map[string]any
+	InOvers     bool
+}
+
+// CreateEntry inserts a new entry tied to a user and year. A small duplicate
+// check here prevents race conditions from slipping past the handler's earlier
+// existence check.
+func (s *Store) CreateEntry(ctx context.Context, params CreateEntryParams) (Entry, error) {
+	const duplicateQuery = `
+		SELECT 1
+		FROM entries
+		WHERE year = $1 AND clerk_id = $2
+		LIMIT 1
+	`
+
+	var duplicate int
+	err := s.pool.QueryRow(ctx, duplicateQuery, params.Year, params.ClerkID).Scan(&duplicate)
+	if err == nil {
+		return Entry{}, ErrConflict
+	}
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return Entry{}, fmt.Errorf("check duplicate entry for user %s year %d: %w", params.ClerkID, params.Year, err)
+	}
+
+	picksJSON, err := json.Marshal(params.Picks)
+	if err != nil {
+		return Entry{}, fmt.Errorf("encode entry picks json: %w", err)
+	}
+
+	const insertQuery = `
+		INSERT INTO entries (year, clerk_id, display_name, picks, in_overs)
+		VALUES ($1, $2, $3, $4::jsonb, $5)
+		RETURNING
+			id::text,
+			year,
+			clerk_id,
+			display_name,
+			picks,
+			in_overs,
+			locked,
+			created_at,
+			updated_at
+	`
+
+	var entry Entry
+	var picksRaw []byte
+	err = s.pool.QueryRow(
+		ctx,
+		insertQuery,
+		params.Year,
+		params.ClerkID,
+		params.DisplayName,
+		string(picksJSON),
+		params.InOvers,
+	).Scan(
+		&entry.ID,
+		&entry.Year,
+		&entry.ClerkID,
+		&entry.DisplayName,
+		&picksRaw,
+		&entry.InOvers,
+		&entry.Locked,
+		&entry.CreatedAt,
+		&entry.UpdatedAt,
+	)
+	if err != nil {
+		return Entry{}, fmt.Errorf("create entry for user %s year %d: %w", params.ClerkID, params.Year, err)
+	}
+
+	if err := json.Unmarshal(picksRaw, &entry.Picks); err != nil {
+		return Entry{}, fmt.Errorf("decode inserted entry picks json: %w", err)
+	}
+
+	return entry, nil
+}
+
 // GetConfig returns the tournament configuration row for a given year.
 // This is the first typed query in the project and acts as the pattern future
 // DB functions should follow: accept context, return a domain-shaped struct,
@@ -213,11 +320,15 @@ func (s *Store) GetConfig(ctx context.Context, year int) (TournamentConfig, erro
 		WHERE year = $1
 	`
 
+	return s.getConfigByQuery(ctx, query, year)
+}
+
+func (s *Store) getConfigByQuery(ctx context.Context, query string, args ...any) (TournamentConfig, error) {
 	var cfg TournamentConfig
 	var groupsRaw []byte
 	var payoutsRaw []byte
 
-	err := s.pool.QueryRow(ctx, query, year).Scan(
+	err := s.pool.QueryRow(ctx, query, args...).Scan(
 		&cfg.Year,
 		&cfg.EntryDeadline,
 		&cfg.StartDate,
@@ -235,7 +346,7 @@ func (s *Store) GetConfig(ctx context.Context, year int) (TournamentConfig, erro
 			return TournamentConfig{}, ErrNotFound
 		}
 
-		return TournamentConfig{}, fmt.Errorf("get tournament config for year %d: %w", year, err)
+		return TournamentConfig{}, fmt.Errorf("get tournament config: %w", err)
 	}
 
 	if len(groupsRaw) > 0 {

@@ -21,6 +21,11 @@ import (
 )
 
 type Config struct {
+	MockEnabled       bool
+	MockClerkID       string
+	MockEmail         string
+	MockName          string
+	MockAdmin         bool
 	JWKSURL           string
 	Issuer            string
 	Audience          string
@@ -145,6 +150,18 @@ func NewMiddleware(store *db.Store, cfg Config) *Middleware {
 // and attaches the authenticated user to the request context.
 func (m *Middleware) RequireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if m.config.MockEnabled {
+			authUser, err := m.mockUser(r.Context())
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			ctx := context.WithValue(r.Context(), userContextKey, authUser)
+			next.ServeHTTP(w, r.WithContext(ctx))
+			return
+		}
+
 		token := sessionTokenFromRequest(r)
 		if token == "" {
 			http.Error(w, "missing session token", http.StatusUnauthorized)
@@ -195,6 +212,31 @@ func (m *Middleware) RequireAdmin(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	}))
+}
+
+func (m *Middleware) mockUser(ctx context.Context) (User, error) {
+	displayName := optionalString(m.config.MockName)
+
+	if m.store == nil {
+		return User{
+			Record: db.User{
+				ClerkID:     m.config.MockClerkID,
+				Email:       m.config.MockEmail,
+				DisplayName: displayName,
+			},
+			IsAdmin: m.config.MockAdmin,
+		}, nil
+	}
+
+	record, err := m.store.UpsertUser(ctx, m.config.MockClerkID, m.config.MockEmail, displayName)
+	if err != nil {
+		return User{}, fmt.Errorf("sync mock user: %w", err)
+	}
+
+	return User{
+		Record:  record,
+		IsAdmin: m.config.MockAdmin,
+	}, nil
 }
 
 func (m *Middleware) authenticate(ctx context.Context, token string) (User, error) {

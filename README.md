@@ -64,9 +64,9 @@ The backend currently expects:
 
 - `HTTP_ADDR`
 - `DATABASE_URL`
-- `CLERK_JWKS_URL` for protected API routes
+- either mock-auth env vars or `CLERK_JWKS_URL` for protected API routes
 
-Clerk-related values are included in `.env.example`. The backend now has protected-route validation, but it still needs real Clerk app values before token validation will work end-to-end.
+Mock auth and Clerk-related values are included in `.env.example`. Mock auth is the current local-development path while Clerk wiring is still in progress.
 
 ## Running the Backend
 
@@ -133,9 +133,11 @@ The first protected backend route now exists:
 
 - `GET /api/me`
 - `GET /api/entries/mine`
+- `POST /api/entries`
 
 What it does today:
 
+- supports a config-driven mock authenticated user for local development
 - accepts either a bearer token or the `__session` cookie
 - validates RS256 JWT signatures against Clerk JWKS
 - validates Clerk `azp` against configured allowed origins when present
@@ -143,12 +145,23 @@ What it does today:
 - falls back to the Clerk Backend API for the user profile if the session token does not include an email claim
 - returns the local user record plus `is_admin`
 - returns the authenticated user's entry for the active tournament year when one exists
+- creates an entry for the active tournament year before the deadline and blocks duplicates
 
 What is still incomplete:
 
-- no frontend Clerk integration yet
+- no frontend auth integration yet
 - no admin-only routes are wired yet, even though the initial admin middleware exists
 - no local helper exists yet for generating or capturing a dev token flow
+
+## Mock Auth Dev Setup
+
+For now, local development can use mock auth instead of Clerk:
+
+- set `MOCK_AUTH_ENABLED=true`
+- set the mock user values in `.env`
+- run the backend normally
+
+When mock auth is enabled, protected routes behave as if the configured mock user is logged in. That keeps pool workflows moving without coupling feature work to Clerk setup timing.
 
 ## Clerk Dev Setup
 

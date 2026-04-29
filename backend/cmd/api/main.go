@@ -30,6 +30,11 @@ func main() {
 
 	store := db.NewStore(dbPool)
 	authMiddleware := auth.NewMiddleware(store, auth.Config{
+		MockEnabled:       cfg.MockAuthEnabled,
+		MockClerkID:       cfg.MockAuthClerkID,
+		MockEmail:         cfg.MockAuthEmail,
+		MockName:          cfg.MockAuthName,
+		MockAdmin:         cfg.MockAuthAdmin,
 		JWKSURL:           cfg.ClerkJWKSURL,
 		Issuer:            cfg.ClerkIssuer,
 		Audience:          cfg.ClerkAudience,
@@ -43,6 +48,9 @@ func main() {
 	router := api.NewRouter(store, authMiddleware)
 
 	log.Printf("connected to postgres")
+	if cfg.MockAuthEnabled {
+		log.Printf("mock auth enabled for local development as %s", cfg.MockAuthEmail)
+	}
 	if cfg.ClerkJWKSURL == "" {
 		log.Printf("auth middleware is unconfigured: protected routes will return 503 until CLERK_JWKS_URL is set")
 	}

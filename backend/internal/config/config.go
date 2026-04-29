@@ -12,6 +12,11 @@ import (
 type Config struct {
 	HTTPAddr               string
 	DatabaseURL            string
+	MockAuthEnabled        bool
+	MockAuthClerkID        string
+	MockAuthEmail          string
+	MockAuthName           string
+	MockAuthAdmin          bool
 	ClerkJWKSURL           string
 	ClerkIssuer            string
 	ClerkAudience          string
@@ -29,6 +34,11 @@ func Load() (Config, error) {
 	cfg := Config{
 		HTTPAddr:               getEnv("HTTP_ADDR", ":8080"),
 		DatabaseURL:            os.Getenv("DATABASE_URL"),
+		MockAuthEnabled:        getEnvBool("MOCK_AUTH_ENABLED", false),
+		MockAuthClerkID:        getEnv("MOCK_AUTH_CLERK_ID", "dev-user"),
+		MockAuthEmail:          getEnv("MOCK_AUTH_EMAIL", "dev@example.com"),
+		MockAuthName:           getEnv("MOCK_AUTH_NAME", "Dev User"),
+		MockAuthAdmin:          getEnvBool("MOCK_AUTH_ADMIN", false),
 		ClerkJWKSURL:           os.Getenv("CLERK_JWKS_URL"),
 		ClerkIssuer:            os.Getenv("CLERK_ISSUER"),
 		ClerkAudience:          os.Getenv("CLERK_AUDIENCE"),
@@ -53,6 +63,22 @@ func getEnv(key, fallback string) string {
 	}
 
 	return fallback
+}
+
+func getEnvBool(key string, fallback bool) bool {
+	value := strings.TrimSpace(strings.ToLower(os.Getenv(key)))
+	if value == "" {
+		return fallback
+	}
+
+	switch value {
+	case "1", "true", "yes", "on":
+		return true
+	case "0", "false", "no", "off":
+		return false
+	default:
+		return fallback
+	}
 }
 
 func splitCSV(value string) []string {
