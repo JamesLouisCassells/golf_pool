@@ -23,7 +23,7 @@ Get the skeleton in place before writing any real logic.
 ### Vue frontend scaffold
 - [x] `npm create vite@latest` with Vue template
 - [ ] Install Tailwind CSS, Clerk Vue SDK
-- [ ] Stub out views: `Entries`, `Admin`
+- [x] Stub out views: `Entries`, `Admin`
 - [x] Stub out views: `Home`, `Standings`, `Enter`
 - [x] Set up `router/index.js` with routes for each view
 - [x] `vite.config.js`: proxy `/api/*` to `localhost:8080` in dev
@@ -66,8 +66,8 @@ Get the skeleton in place before writing any real logic.
 ### Tournament config
 - [ ] Seed `tournament_config` for the active year (migration or admin endpoint)
 - [x] `GET /api/config/:year` — return group definitions, player lists, deadline
-- [ ] Admin page: form to view and edit config (deadline, multipliers, pool payouts, FRL winner)
-- [ ] `PUT /api/admin/config/:year` — save config changes
+- [x] Admin page: form to view and edit config (deadline, multipliers, pool payouts, FRL winner)
+- [x] `PUT /api/admin/config/:year` — save config changes
 
 ### Entry creation & editing
 - [x] `POST /api/entries` — create entry, enforce deadline check

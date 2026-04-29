@@ -129,9 +129,11 @@ What the current frontend does:
 
 - provides a router with `Home`, `Enter`, and `Standings` routes
 - provides an `Entries` route backed by the public entries endpoint
+- provides an `Admin` route backed by admin-only config endpoints
 - loads `GET /api/config/:year`
 - loads `GET /api/entries/mine`
 - loads `GET /api/entries`
+- loads and saves `/api/admin/config/:year`
 - submits `POST /api/entries` for a new entry
 - submits `PUT /api/entries/:id` for an existing entry
 - shows a countdown and locks the form after the deadline
@@ -150,6 +152,8 @@ The first protected backend route now exists:
 - `GET /api/entries/mine`
 - `GET /api/entries`
 - `POST /api/entries`
+- `GET /api/admin/config/:year`
+- `PUT /api/admin/config/:year`
 
 What it does today:
 
@@ -163,11 +167,12 @@ What it does today:
 - returns the authenticated user's entry for the active tournament year when one exists
 - returns the public active-year entry list after the tournament has started
 - creates an entry for the active tournament year before the deadline and blocks duplicates
+- allows admin-only reads and updates of tournament config
 
 What is still incomplete:
 
 - no frontend auth integration yet
-- no admin-only routes are wired yet, even though the initial admin middleware exists
+- frontend route-guarding for admin is still pending
 - no local helper exists yet for generating or capturing a dev token flow
 
 ## Mock Auth Dev Setup

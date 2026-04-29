@@ -20,6 +20,7 @@ type Store interface {
 	GetMyEntry(ctx context.Context, clerkID string) (db.Entry, error)
 	ListEntriesForActiveYear(ctx context.Context) ([]db.Entry, error)
 	CreateEntry(ctx context.Context, params db.CreateEntryParams) (db.Entry, error)
+	UpdateTournamentConfig(ctx context.Context, params db.UpdateTournamentConfigParams) (db.TournamentConfig, error)
 }
 
 type Handler struct {
@@ -30,6 +31,19 @@ type createEntryRequest struct {
 	DisplayName string         `json:"display_name"`
 	Picks       map[string]any `json:"picks"`
 	InOvers     bool           `json:"in_overs"`
+}
+
+type updateTournamentConfigRequest struct {
+	EntryDeadline     *time.Time     `json:"entry_deadline"`
+	StartDate         *time.Time     `json:"start_date"`
+	EndDate           *time.Time     `json:"end_date"`
+	Groups            map[string]any `json:"groups"`
+	MuttMultiplier    string         `json:"mutt_multiplier"`
+	OldMuttMultiplier string         `json:"old_mutt_multiplier"`
+	PoolPayouts       map[string]any `json:"pool_payouts"`
+	FRLWinner         *string        `json:"frl_winner"`
+	FRLPayout         int            `json:"frl_payout"`
+	Active            bool           `json:"active"`
 }
 
 // NewRouter wires the HTTP surface for the API.
@@ -45,6 +59,8 @@ func NewRouter(store Store, authMiddleware *auth.Middleware) http.Handler {
 	r.With(authMiddleware.RequireAuth).Get("/api/me", h.me)
 	r.With(authMiddleware.RequireAuth).Get("/api/entries/mine", h.getMyEntry)
 	r.With(authMiddleware.RequireAuth).Post("/api/entries", h.createEntry)
+	r.With(authMiddleware.RequireAdmin).Get("/api/admin/config/{year}", h.getAdminConfig)
+	r.With(authMiddleware.RequireAdmin).Put("/api/admin/config/{year}", h.updateAdminConfig)
 
 	return r
 }
@@ -84,6 +100,10 @@ func (h Handler) getConfig(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(cfg); err != nil {
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 	}
+}
+
+func (h Handler) getAdminConfig(w http.ResponseWriter, r *http.Request) {
+	h.getConfig(w, r)
 }
 
 func (h Handler) me(w http.ResponseWriter, r *http.Request) {
@@ -230,6 +250,64 @@ func (h Handler) createEntry(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusCreated)
 	if err := json.NewEncoder(w).Encode(entry); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
+}
+
+func (h Handler) updateAdminConfig(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	year, err := strconv.Atoi(chi.URLParam(r, "year"))
+	if err != nil {
+		http.Error(w, "year must be a valid integer", http.StatusBadRequest)
+		return
+	}
+
+	var request updateTournamentConfigRequest
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		http.Error(w, "request body must be valid json", http.StatusBadRequest)
+		return
+	}
+
+	if len(request.Groups) == 0 {
+		http.Error(w, "groups are required", http.StatusBadRequest)
+		return
+	}
+
+	if len(request.PoolPayouts) == 0 {
+		http.Error(w, "pool payouts are required", http.StatusBadRequest)
+		return
+	}
+
+	if strings.TrimSpace(request.MuttMultiplier) == "" || strings.TrimSpace(request.OldMuttMultiplier) == "" {
+		http.Error(w, "mutt multipliers are required", http.StatusBadRequest)
+		return
+	}
+
+	cfg, err := h.store.UpdateTournamentConfig(r.Context(), db.UpdateTournamentConfigParams{
+		Year:              year,
+		EntryDeadline:     request.EntryDeadline,
+		StartDate:         request.StartDate,
+		EndDate:           request.EndDate,
+		Groups:            request.Groups,
+		MuttMultiplier:    strings.TrimSpace(request.MuttMultiplier),
+		OldMuttMultiplier: strings.TrimSpace(request.OldMuttMultiplier),
+		PoolPayouts:       request.PoolPayouts,
+		FRLWinner:         request.FRLWinner,
+		FRLPayout:         request.FRLPayout,
+		Active:            request.Active,
+	})
+	if err != nil {
+		if err == db.ErrNotFound {
+			http.Error(w, "config not found", http.StatusNotFound)
+			return
+		}
+
+		http.Error(w, "failed to update config", http.StatusInternalServerError)
+		return
+	}
+
+	if err := json.NewEncoder(w).Encode(cfg); err != nil {
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 	}
 }

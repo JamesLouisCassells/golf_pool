@@ -54,6 +54,20 @@ type TournamentConfig struct {
 	Active            bool           `json:"active"`
 }
 
+type UpdateTournamentConfigParams struct {
+	Year              int
+	EntryDeadline     *time.Time
+	StartDate         *time.Time
+	EndDate           *time.Time
+	Groups            map[string]any
+	MuttMultiplier    string
+	OldMuttMultiplier string
+	PoolPayouts       map[string]any
+	FRLWinner         *string
+	FRLPayout         int
+	Active            bool
+}
+
 var ErrNotFound = errors.New("not found")
 var ErrConflict = errors.New("conflict")
 
@@ -399,6 +413,74 @@ func (s *Store) GetConfig(ctx context.Context, year int) (TournamentConfig, erro
 	`
 
 	return s.getConfigByQuery(ctx, query, year)
+}
+
+// UpdateTournamentConfig updates the editable configuration row for a given year.
+// Keeping this as one typed function makes the admin workflow explicit and
+// keeps JSON and numeric marshaling out of the handler layer.
+func (s *Store) UpdateTournamentConfig(ctx context.Context, params UpdateTournamentConfigParams) (TournamentConfig, error) {
+	groupsJSON, err := json.Marshal(params.Groups)
+	if err != nil {
+		return TournamentConfig{}, fmt.Errorf("encode groups json: %w", err)
+	}
+
+	payoutsJSON, err := json.Marshal(params.PoolPayouts)
+	if err != nil {
+		return TournamentConfig{}, fmt.Errorf("encode pool payouts json: %w", err)
+	}
+
+	const query = `
+		UPDATE tournament_config
+		SET
+			entry_deadline = $2,
+			start_date = $3,
+			end_date = $4,
+			groups = $5::jsonb,
+			mutt_multiplier = $6::numeric,
+			old_mutt_multiplier = $7::numeric,
+			pool_payouts = $8::jsonb,
+			frl_winner = $9,
+			frl_payout = $10,
+			active = $11
+		WHERE year = $1
+		RETURNING
+			year,
+			entry_deadline,
+			start_date,
+			end_date,
+			groups,
+			mutt_multiplier::text,
+			old_mutt_multiplier::text,
+			pool_payouts,
+			frl_winner,
+			frl_payout,
+			active
+	`
+
+	cfg, err := s.getConfigByQuery(
+		ctx,
+		query,
+		params.Year,
+		params.EntryDeadline,
+		params.StartDate,
+		params.EndDate,
+		string(groupsJSON),
+		params.MuttMultiplier,
+		params.OldMuttMultiplier,
+		string(payoutsJSON),
+		params.FRLWinner,
+		params.FRLPayout,
+		params.Active,
+	)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return TournamentConfig{}, ErrNotFound
+		}
+
+		return TournamentConfig{}, fmt.Errorf("update tournament config for year %d: %w", params.Year, err)
+	}
+
+	return cfg, nil
 }
 
 func (s *Store) getConfigByQuery(ctx context.Context, query string, args ...any) (TournamentConfig, error) {

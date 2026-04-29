@@ -41,7 +41,8 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -343,7 +344,11 @@ p {
 }
 
 input[type="text"],
-select {
+input[type="datetime-local"],
+input[type="date"],
+input[type="number"],
+select,
+.json-area {
   appearance: none;
   width: 100%;
   border: 1px solid rgba(22, 37, 31, 0.16);
@@ -355,16 +360,28 @@ select {
 }
 
 input[type="text"]:focus,
-select:focus {
+input[type="datetime-local"]:focus,
+input[type="date"]:focus,
+input[type="number"]:focus,
+select:focus,
+.json-area:focus {
   outline: none;
   border-color: rgba(33, 79, 62, 0.5);
   box-shadow: 0 0 0 4px rgba(33, 79, 62, 0.12);
 }
 
 input:disabled,
-select:disabled {
+select:disabled,
+textarea:disabled {
   cursor: not-allowed;
   opacity: 0.72;
+}
+
+.json-area {
+  resize: vertical;
+  min-height: 180px;
+  font-family: var(--mono);
+  line-height: 1.45;
 }
 
 .checkbox-field {
@@ -405,6 +422,20 @@ select:disabled {
   font-weight: 700;
   letter-spacing: 0.01em;
   box-shadow: 0 16px 30px rgba(24, 62, 49, 0.24);
+}
+
+.ghost-button {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 12px 18px;
+  background: rgba(255, 253, 247, 0.84);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.ghost-button:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
 }
 
 .submit-button:disabled {

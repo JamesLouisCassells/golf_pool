@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
+import AdminView from '../views/Admin.vue'
 import EntriesView from '../views/Entries.vue'
 import EnterView from '../views/Enter.vue'
 import HomeView from '../views/Home.vue'
@@ -17,6 +18,11 @@ const router = createRouter({
       path: '/entries',
       name: 'entries',
       component: EntriesView,
+    },
+    {
+      path: '/admin',
+      name: 'admin',
+      component: AdminView,
     },
     {
       path: '/enter',
