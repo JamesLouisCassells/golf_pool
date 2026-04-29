@@ -134,6 +134,7 @@ The first protected backend route now exists:
 - `GET /api/me`
 - `GET /api/entries/mine`
 - `POST /api/entries`
+- `PUT /api/entries/:id`
 
 What it does today:
 
@@ -146,6 +147,7 @@ What it does today:
 - returns the local user record plus `is_admin`
 - returns the authenticated user's entry for the active tournament year when one exists
 - creates an entry for the active tournament year before the deadline and blocks duplicates
+- updates an owned active-year entry before the deadline and blocks cross-user edits
 
 What is still incomplete:
 

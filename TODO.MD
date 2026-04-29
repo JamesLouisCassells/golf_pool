@@ -45,7 +45,8 @@ Get the skeleton in place before writing any real logic.
 - [x] Migration 003: create `tournament_config` table
 - [x] Add DB connection pool to Go (`pgxpool`), log success on startup
 - [x] Add typed config and user queries in `db/` (`GetConfig`, `GetUser`, `UpsertUser`)
-- [ ] Add remaining typed query functions (`CreateEntry`, entry lookup/update, config update, standings reads)
+- [x] Add typed entry lifecycle queries (`CreateEntry`, entry lookup, entry update)
+- [ ] Add remaining typed query functions (`config update`, standings reads, admin entry operations)
 
 ### Clerk auth
 - [ ] Create Clerk account, set up application, enable Google + email/password providers
@@ -69,7 +70,7 @@ Get the skeleton in place before writing any real logic.
 
 ### Entry creation & editing
 - [x] `POST /api/entries` — create entry, enforce deadline check
-- [ ] `PUT /api/entries/:id` — edit own entry, enforce deadline + ownership check
+- [x] `PUT /api/entries/:id` — edit own entry, enforce deadline + ownership check
 - [x] `GET /api/entries/mine` — return my entry for the current year
 - [ ] `Enter.vue`: form built dynamically from config groups, pre-filled if entry already exists
 - [ ] Show deadline countdown on the entry form
