@@ -128,8 +128,10 @@ npm run dev
 What the current frontend does:
 
 - provides a router with `Home`, `Enter`, and `Standings` routes
+- provides an `Entries` route backed by the public entries endpoint
 - loads `GET /api/config/:year`
 - loads `GET /api/entries/mine`
+- loads `GET /api/entries`
 - submits `POST /api/entries` for a new entry
 - submits `PUT /api/entries/:id` for an existing entry
 - shows a countdown and locks the form after the deadline
@@ -146,6 +148,7 @@ The first protected backend route now exists:
 
 - `GET /api/me`
 - `GET /api/entries/mine`
+- `GET /api/entries`
 - `POST /api/entries`
 
 What it does today:
@@ -158,6 +161,7 @@ What it does today:
 - falls back to the Clerk Backend API for the user profile if the session token does not include an email claim
 - returns the local user record plus `is_admin`
 - returns the authenticated user's entry for the active tournament year when one exists
+- returns the public active-year entry list after the tournament has started
 - creates an entry for the active tournament year before the deadline and blocks duplicates
 
 What is still incomplete:

@@ -46,7 +46,8 @@ Get the skeleton in place before writing any real logic.
 - [x] Migration 003: create `tournament_config` table
 - [x] Add DB connection pool to Go (`pgxpool`), log success on startup
 - [x] Add typed config and user queries in `db/` (`GetConfig`, `GetUser`, `UpsertUser`)
-- [ ] Add remaining typed query functions (`CreateEntry`, entry lookup/update, config update, standings reads)
+- [x] Add typed entry lifecycle and listing queries (`CreateEntry`, entry lookup/update, active-year list)
+- [ ] Add remaining typed query functions (`config update`, standings reads, admin entry operations)
 
 ### Clerk auth
 - [ ] Create Clerk account, set up application, enable Google + email/password providers
@@ -72,6 +73,7 @@ Get the skeleton in place before writing any real logic.
 - [x] `POST /api/entries` — create entry, enforce deadline check
 - [x] `PUT /api/entries/:id` — edit own entry, enforce deadline + ownership check
 - [x] `GET /api/entries/mine` — return my entry for the current year
+- [x] `GET /api/entries` — public list after tournament start
 - [x] `Enter.vue`: form built dynamically from config groups, pre-filled if entry already exists
 - [x] Show deadline countdown on the entry form
 - [x] Disable form and show a locked message after deadline passes
@@ -127,7 +129,7 @@ Get the skeleton in place before writing any real logic.
 
 - [ ] Write a script to import 2024 and 2025 entries from existing CSVs into the DB
 - [ ] Verify historical standings pages render correctly for both years
-- [ ] `Entries.vue`: grid of all entries for the active year (visible after tournament starts)
+- [x] `Entries.vue`: grid of all entries for the active year (visible after tournament starts)
 - [ ] Navigation: consistent nav bar across all pages with login/logout state
 - [ ] Mobile responsive check on all pages
 - [ ] Basic error handling — friendly messages for API failures and loading states

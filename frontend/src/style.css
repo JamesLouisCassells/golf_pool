@@ -294,10 +294,52 @@ p {
   gap: 16px;
 }
 
+.entries-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
 .card-step {
   font-family: var(--mono);
   color: var(--green-soft);
   margin-bottom: 12px;
+}
+
+.entry-card {
+  display: grid;
+  gap: 18px;
+}
+
+.entry-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.pick-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.pick-list div {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.pick-list dt {
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.pick-list dd {
+  margin: 0;
+  color: var(--ink);
 }
 
 input[type="text"],
@@ -389,6 +431,10 @@ select:disabled {
   }
 
   .home-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .entries-grid {
     grid-template-columns: 1fr;
   }
 

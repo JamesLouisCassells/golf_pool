@@ -17,6 +17,7 @@ type stubStore struct {
 	getConfigFn       func(ctx context.Context, year int) (db.TournamentConfig, error)
 	getActiveConfigFn func(ctx context.Context) (db.TournamentConfig, error)
 	getMyEntryFn      func(ctx context.Context, clerkID string) (db.Entry, error)
+	listEntriesFn     func(ctx context.Context) ([]db.Entry, error)
 	createEntryFn     func(ctx context.Context, params db.CreateEntryParams) (db.Entry, error)
 }
 
@@ -42,6 +43,14 @@ func (s stubStore) GetMyEntry(ctx context.Context, clerkID string) (db.Entry, er
 	}
 
 	return s.getMyEntryFn(ctx, clerkID)
+}
+
+func (s stubStore) ListEntriesForActiveYear(ctx context.Context) ([]db.Entry, error) {
+	if s.listEntriesFn == nil {
+		return nil, errors.New("unexpected ListEntriesForActiveYear call")
+	}
+
+	return s.listEntriesFn(ctx)
 }
 
 func (s stubStore) CreateEntry(ctx context.Context, params db.CreateEntryParams) (db.Entry, error) {
@@ -94,6 +103,60 @@ func TestProtectedCreateEntryRouteRequiresBearerToken(t *testing.T) {
 
 	if recorder.Code != http.StatusUnauthorized {
 		t.Fatalf("expected status %d, got %d", http.StatusUnauthorized, recorder.Code)
+	}
+}
+
+func TestListEntriesReturnsForbiddenBeforeTournamentStarts(t *testing.T) {
+	t.Parallel()
+
+	future := time.Now().UTC().Add(2 * time.Hour)
+	store := stubStore{
+		getActiveConfigFn: func(ctx context.Context) (db.TournamentConfig, error) {
+			return db.TournamentConfig{Year: 2026, StartDate: &future, Active: true}, nil
+		},
+	}
+
+	router := NewRouter(store, auth.NewMiddleware(nil, auth.Config{}))
+	req := httptest.NewRequest(http.MethodGet, "/api/entries", nil)
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusForbidden {
+		t.Fatalf("expected status %d, got %d", http.StatusForbidden, recorder.Code)
+	}
+}
+
+func TestListEntriesReturnsEntriesAfterTournamentStarts(t *testing.T) {
+	t.Parallel()
+
+	past := time.Now().UTC().Add(-2 * time.Hour)
+	store := stubStore{
+		getActiveConfigFn: func(ctx context.Context) (db.TournamentConfig, error) {
+			return db.TournamentConfig{Year: 2026, StartDate: &past, Active: true}, nil
+		},
+		listEntriesFn: func(ctx context.Context) ([]db.Entry, error) {
+			return []db.Entry{
+				{
+					ID:          "entry-1",
+					Year:        2026,
+					DisplayName: "James",
+					Picks:       map[string]any{"Group 1": "Scheffler"},
+					CreatedAt:   time.Unix(1, 0).UTC(),
+					UpdatedAt:   time.Unix(2, 0).UTC(),
+				},
+			}, nil
+		},
+	}
+
+	router := NewRouter(store, auth.NewMiddleware(nil, auth.Config{}))
+	req := httptest.NewRequest(http.MethodGet, "/api/entries", nil)
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
 	}
 }
 

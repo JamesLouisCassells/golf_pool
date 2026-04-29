@@ -14,6 +14,7 @@
     <nav class="main-nav" aria-label="Primary">
       <RouterLink to="/" class="nav-link">Home</RouterLink>
       <RouterLink to="/enter" class="nav-link">Enter</RouterLink>
+      <RouterLink to="/entries" class="nav-link">Entries</RouterLink>
       <RouterLink to="/standings" class="nav-link">Standings</RouterLink>
     </nav>
 

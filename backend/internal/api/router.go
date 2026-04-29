@@ -18,6 +18,7 @@ type Store interface {
 	GetConfig(ctx context.Context, year int) (db.TournamentConfig, error)
 	GetActiveConfig(ctx context.Context) (db.TournamentConfig, error)
 	GetMyEntry(ctx context.Context, clerkID string) (db.Entry, error)
+	ListEntriesForActiveYear(ctx context.Context) ([]db.Entry, error)
 	CreateEntry(ctx context.Context, params db.CreateEntryParams) (db.Entry, error)
 }
 
@@ -40,6 +41,7 @@ func NewRouter(store Store, authMiddleware *auth.Middleware) http.Handler {
 
 	r.Get("/healthz", h.healthz)
 	r.Get("/api/config/{year}", h.getConfig)
+	r.Get("/api/entries", h.listEntries)
 	r.With(authMiddleware.RequireAuth).Get("/api/me", h.me)
 	r.With(authMiddleware.RequireAuth).Get("/api/entries/mine", h.getMyEntry)
 	r.With(authMiddleware.RequireAuth).Post("/api/entries", h.createEntry)
@@ -119,6 +121,36 @@ func (h Handler) getMyEntry(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewEncoder(w).Encode(entry); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
+}
+
+func (h Handler) listEntries(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	activeConfig, err := h.store.GetActiveConfig(r.Context())
+	if err != nil {
+		if err == db.ErrNotFound {
+			http.Error(w, "active tournament config not found", http.StatusNotFound)
+			return
+		}
+
+		http.Error(w, "failed to load active tournament config", http.StatusInternalServerError)
+		return
+	}
+
+	if tournamentNotStarted(activeConfig.StartDate, time.Now().UTC()) {
+		http.Error(w, "entries are hidden until the tournament starts", http.StatusForbidden)
+		return
+	}
+
+	entries, err := h.store.ListEntriesForActiveYear(r.Context())
+	if err != nil {
+		http.Error(w, "failed to load entries", http.StatusInternalServerError)
+		return
+	}
+
+	if err := json.NewEncoder(w).Encode(entries); err != nil {
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 	}
 }
@@ -204,4 +236,12 @@ func (h Handler) createEntry(w http.ResponseWriter, r *http.Request) {
 
 func deadlinePassed(deadline *time.Time, now time.Time) bool {
 	return deadline != nil && !deadline.After(now)
+}
+
+func tournamentNotStarted(startDate *time.Time, now time.Time) bool {
+	if startDate == nil {
+		return false
+	}
+
+	return startDate.After(now)
 }
