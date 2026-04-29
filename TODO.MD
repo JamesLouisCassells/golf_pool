@@ -25,7 +25,7 @@ Get the skeleton in place before writing any real logic.
 - [ ] Install Tailwind CSS, Vue Router, Clerk Vue SDK
 - [ ] Stub out views: `Home`, `Standings`, `Enter`, `Entries`, `Admin`
 - [ ] Set up `router/index.js` with routes for each view
-- [ ] `vite.config.js`: proxy `/api/*` to `localhost:8080` in dev
+- [x] `vite.config.js`: proxy `/api/*` to `localhost:8080` in dev
 - [ ] `Dockerfile` for frontend (node build stage → nginx:alpine)
 - [ ] `nginx.conf`: serve static files, proxy `/api/*` to `localhost:8080`
 
@@ -69,11 +69,11 @@ Get the skeleton in place before writing any real logic.
 
 ### Entry creation & editing
 - [x] `POST /api/entries` — create entry, enforce deadline check
-- [ ] `PUT /api/entries/:id` — edit own entry, enforce deadline + ownership check
+- [x] `PUT /api/entries/:id` — edit own entry, enforce deadline + ownership check
 - [x] `GET /api/entries/mine` — return my entry for the current year
-- [ ] `Enter.vue`: form built dynamically from config groups, pre-filled if entry already exists
-- [ ] Show deadline countdown on the entry form
-- [ ] Disable form and show a locked message after deadline passes
+- [x] `Enter.vue`: form built dynamically from config groups, pre-filled if entry already exists
+- [x] Show deadline countdown on the entry form
+- [x] Disable form and show a locked message after deadline passes
 
 ### Golf scores + payout calculation
 - [ ] Port RapidAPI polling logic from Node.js to Go (`golf/` package)

@@ -115,7 +115,7 @@ curl http://localhost:8080/api/config/2026
 
 ## Frontend
 
-The frontend was scaffolded with Vue and Vite, but it is still at the starter-template stage.
+The frontend now has an initial integrated entry page in `src/views/Enter.vue`.
 
 To run it locally:
 
@@ -125,7 +125,19 @@ npm install
 npm run dev
 ```
 
-The frontend is not yet integrated with the backend API in a meaningful way.
+What this first frontend slice does:
+
+- loads `GET /api/config/:year`
+- loads `GET /api/entries/mine`
+- submits `POST /api/entries` for a new entry
+- submits `PUT /api/entries/:id` for an existing entry
+- shows a countdown and locks the form after the deadline
+
+What is still missing:
+
+- router and page structure
+- real Clerk auth state in the browser
+- standings, admin, and shared navigation views
 
 ## Current Auth Slice
 
