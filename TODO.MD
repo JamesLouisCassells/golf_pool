@@ -22,9 +22,10 @@ Get the skeleton in place before writing any real logic.
 
 ### Vue frontend scaffold
 - [x] `npm create vite@latest` with Vue template
-- [ ] Install Tailwind CSS, Vue Router, Clerk Vue SDK
-- [ ] Stub out views: `Home`, `Standings`, `Enter`, `Entries`, `Admin`
-- [ ] Set up `router/index.js` with routes for each view
+- [ ] Install Tailwind CSS, Clerk Vue SDK
+- [ ] Stub out views: `Entries`, `Admin`
+- [x] Stub out views: `Home`, `Standings`, `Enter`
+- [x] Set up `router/index.js` with routes for each view
 - [x] `vite.config.js`: proxy `/api/*` to `localhost:8080` in dev
 - [ ] `Dockerfile` for frontend (node build stage → nginx:alpine)
 - [ ] `nginx.conf`: serve static files, proxy `/api/*` to `localhost:8080`

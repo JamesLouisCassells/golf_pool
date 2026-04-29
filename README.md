@@ -125,8 +125,9 @@ npm install
 npm run dev
 ```
 
-What this first frontend slice does:
+What the current frontend does:
 
+- provides a router with `Home`, `Enter`, and `Standings` routes
 - loads `GET /api/config/:year`
 - loads `GET /api/entries/mine`
 - submits `POST /api/entries` for a new entry
@@ -135,9 +136,9 @@ What this first frontend slice does:
 
 What is still missing:
 
-- router and page structure
 - real Clerk auth state in the browser
-- standings, admin, and shared navigation views
+- live standings integration
+- entries and admin views
 
 ## Current Auth Slice
 

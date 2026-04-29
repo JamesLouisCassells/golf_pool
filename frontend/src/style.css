@@ -67,6 +67,38 @@ button {
   margin-bottom: 28px;
 }
 
+.main-nav {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 42px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 253, 247, 0.72);
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 600;
+  transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+}
+
+.nav-link:hover {
+  transform: translateY(-1px);
+  border-color: rgba(33, 79, 62, 0.28);
+}
+
+.nav-link.router-link-active {
+  background: linear-gradient(135deg, var(--green), #183e31);
+  color: #f9f5eb;
+  border-color: transparent;
+}
+
 .eyebrow,
 .kicker,
 .status-label {
@@ -97,6 +129,13 @@ h2 {
 
 h3 {
   font-size: clamp(1.5rem, 2.5vw, 2.2rem);
+}
+
+h4 {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 1.35rem;
 }
 
 p {
@@ -249,6 +288,18 @@ p {
   border: 1px solid var(--line);
 }
 
+.home-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.card-step {
+  font-family: var(--mono);
+  color: var(--green-soft);
+  margin-bottom: 12px;
+}
+
 input[type="text"],
 select {
   appearance: none;
@@ -334,6 +385,10 @@ select:disabled {
   }
 
   .groups-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .home-grid {
     grid-template-columns: 1fr;
   }
 
