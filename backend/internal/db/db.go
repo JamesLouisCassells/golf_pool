@@ -175,32 +175,12 @@ func (s *Store) GetMyEntry(ctx context.Context, clerkID string) (Entry, error) {
 		LIMIT 1
 	`
 
-	var entry Entry
-	var picksRaw []byte
-
-	err := s.pool.QueryRow(ctx, query, clerkID).Scan(
-		&entry.ID,
-		&entry.Year,
-		&entry.ClerkID,
-		&entry.DisplayName,
-		&picksRaw,
-		&entry.InOvers,
-		&entry.Locked,
-		&entry.CreatedAt,
-		&entry.UpdatedAt,
-	)
+	entry, err := s.scanEntry(ctx, query, clerkID)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, ErrNotFound) {
 			return Entry{}, ErrNotFound
 		}
-
 		return Entry{}, fmt.Errorf("get active entry for user %s: %w", clerkID, err)
-	}
-
-	if len(picksRaw) > 0 {
-		if err := json.Unmarshal(picksRaw, &entry.Picks); err != nil {
-			return Entry{}, fmt.Errorf("decode entry picks json: %w", err)
-		}
 	}
 
 	return entry, nil
@@ -284,6 +264,13 @@ type CreateEntryParams struct {
 	InOvers     bool
 }
 
+type UpdateEntryParams struct {
+	ID          string
+	DisplayName string
+	Picks       map[string]any
+	InOvers     bool
+}
+
 // CreateEntry inserts a new entry tied to a user and year. A small duplicate
 // check here prevents race conditions from slipping past the handler's earlier
 // existence check.
@@ -356,6 +343,64 @@ func (s *Store) CreateEntry(ctx context.Context, params CreateEntryParams) (Entr
 	return entry, nil
 }
 
+<<<<<<< HEAD
+// GetEntryByID returns a single entry regardless of user ownership. Handlers
+// can layer permission checks on top of this without duplicating fetch logic.
+func (s *Store) GetEntryByID(ctx context.Context, id string) (Entry, error) {
+	const query = `
+		SELECT
+			id::text,
+			year,
+			clerk_id,
+			display_name,
+			picks,
+			in_overs,
+			locked,
+			created_at,
+			updated_at
+		FROM entries
+		WHERE id = $1
+	`
+
+	return s.scanEntry(ctx, query, id)
+}
+
+// UpdateEntry updates the editable parts of an existing entry. Ownership and
+// deadline checks stay in the handler layer so the permission rules remain
+// explicit at the HTTP boundary.
+func (s *Store) UpdateEntry(ctx context.Context, params UpdateEntryParams) (Entry, error) {
+	picksJSON, err := json.Marshal(params.Picks)
+	if err != nil {
+		return Entry{}, fmt.Errorf("encode entry picks json: %w", err)
+	}
+
+	const query = `
+		UPDATE entries
+		SET
+			display_name = $2,
+			picks = $3::jsonb,
+			in_overs = $4,
+			updated_at = now()
+		WHERE id = $1
+		RETURNING
+			id::text,
+			year,
+			clerk_id,
+			display_name,
+			picks,
+			in_overs,
+			locked,
+			created_at,
+			updated_at
+	`
+
+	entry, err := s.scanEntry(ctx, query, params.ID, params.DisplayName, string(picksJSON), params.InOvers)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return Entry{}, ErrNotFound
+		}
+		return Entry{}, fmt.Errorf("update entry %s: %w", params.ID, err)
+=======
 func scanEntryRow(scanner interface {
 	Scan(dest ...any) error
 }) (Entry, error) {
@@ -385,6 +430,7 @@ func scanEntryRow(scanner interface {
 		if err := json.Unmarshal(picksRaw, &entry.Picks); err != nil {
 			return Entry{}, fmt.Errorf("decode entry picks json: %w", err)
 		}
+>>>>>>> origin/main
 	}
 
 	return entry, nil
@@ -522,4 +568,36 @@ func (s *Store) getConfigByQuery(ctx context.Context, query string, args ...any)
 	}
 
 	return cfg, nil
+}
+
+func (s *Store) scanEntry(ctx context.Context, query string, args ...any) (Entry, error) {
+	var entry Entry
+	var picksRaw []byte
+
+	err := s.pool.QueryRow(ctx, query, args...).Scan(
+		&entry.ID,
+		&entry.Year,
+		&entry.ClerkID,
+		&entry.DisplayName,
+		&picksRaw,
+		&entry.InOvers,
+		&entry.Locked,
+		&entry.CreatedAt,
+		&entry.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return Entry{}, ErrNotFound
+		}
+
+		return Entry{}, err
+	}
+
+	if len(picksRaw) > 0 {
+		if err := json.Unmarshal(picksRaw, &entry.Picks); err != nil {
+			return Entry{}, fmt.Errorf("decode entry picks json: %w", err)
+		}
+	}
+
+	return entry, nil
 }

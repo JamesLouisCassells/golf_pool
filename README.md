@@ -152,8 +152,12 @@ The first protected backend route now exists:
 - `GET /api/entries/mine`
 - `GET /api/entries`
 - `POST /api/entries`
+<<<<<<< HEAD
+- `PUT /api/entries/:id`
+=======
 - `GET /api/admin/config/:year`
 - `PUT /api/admin/config/:year`
+>>>>>>> origin/main
 
 What it does today:
 
@@ -167,7 +171,11 @@ What it does today:
 - returns the authenticated user's entry for the active tournament year when one exists
 - returns the public active-year entry list after the tournament has started
 - creates an entry for the active tournament year before the deadline and blocks duplicates
+<<<<<<< HEAD
+- updates an owned active-year entry before the deadline and blocks cross-user edits
+=======
 - allows admin-only reads and updates of tournament config
+>>>>>>> origin/main
 
 What is still incomplete:
 

@@ -46,7 +46,11 @@ Get the skeleton in place before writing any real logic.
 - [x] Migration 003: create `tournament_config` table
 - [x] Add DB connection pool to Go (`pgxpool`), log success on startup
 - [x] Add typed config and user queries in `db/` (`GetConfig`, `GetUser`, `UpsertUser`)
+<<<<<<< HEAD
+- [x] Add typed entry lifecycle queries (`CreateEntry`, entry lookup, entry update)
+=======
 - [x] Add typed entry lifecycle and listing queries (`CreateEntry`, entry lookup/update, active-year list)
+>>>>>>> origin/main
 - [ ] Add remaining typed query functions (`config update`, standings reads, admin entry operations)
 
 ### Clerk auth
