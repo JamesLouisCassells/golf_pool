@@ -115,7 +115,7 @@ curl http://localhost:8080/api/config/2026
 
 ## Frontend
 
-The frontend was scaffolded with Vue and Vite, but it is still at the starter-template stage.
+The frontend now has an initial integrated entry page in `src/views/Enter.vue`.
 
 To run it locally:
 
@@ -125,7 +125,24 @@ npm install
 npm run dev
 ```
 
-The frontend is not yet integrated with the backend API in a meaningful way.
+What the current frontend does:
+
+- provides a router with `Home`, `Enter`, and `Standings` routes
+- provides an `Entries` route backed by the public entries endpoint
+- provides an `Admin` route backed by admin-only config endpoints
+- loads `GET /api/config/:year`
+- loads `GET /api/entries/mine`
+- loads `GET /api/entries`
+- loads and saves `/api/admin/config/:year`
+- submits `POST /api/entries` for a new entry
+- submits `PUT /api/entries/:id` for an existing entry
+- shows a countdown and locks the form after the deadline
+
+What is still missing:
+
+- real Clerk auth state in the browser
+- live standings integration
+- entries and admin views
 
 ## Current Auth Slice
 
@@ -133,8 +150,14 @@ The first protected backend route now exists:
 
 - `GET /api/me`
 - `GET /api/entries/mine`
+- `GET /api/entries`
 - `POST /api/entries`
+<<<<<<< HEAD
 - `PUT /api/entries/:id`
+=======
+- `GET /api/admin/config/:year`
+- `PUT /api/admin/config/:year`
+>>>>>>> origin/main
 
 What it does today:
 
@@ -146,13 +169,18 @@ What it does today:
 - falls back to the Clerk Backend API for the user profile if the session token does not include an email claim
 - returns the local user record plus `is_admin`
 - returns the authenticated user's entry for the active tournament year when one exists
+- returns the public active-year entry list after the tournament has started
 - creates an entry for the active tournament year before the deadline and blocks duplicates
+<<<<<<< HEAD
 - updates an owned active-year entry before the deadline and blocks cross-user edits
+=======
+- allows admin-only reads and updates of tournament config
+>>>>>>> origin/main
 
 What is still incomplete:
 
 - no frontend auth integration yet
-- no admin-only routes are wired yet, even though the initial admin middleware exists
+- frontend route-guarding for admin is still pending
 - no local helper exists yet for generating or capturing a dev token flow
 
 ## Mock Auth Dev Setup

@@ -54,6 +54,20 @@ type TournamentConfig struct {
 	Active            bool           `json:"active"`
 }
 
+type UpdateTournamentConfigParams struct {
+	Year              int
+	EntryDeadline     *time.Time
+	StartDate         *time.Time
+	EndDate           *time.Time
+	Groups            map[string]any
+	MuttMultiplier    string
+	OldMuttMultiplier string
+	PoolPayouts       map[string]any
+	FRLWinner         *string
+	FRLPayout         int
+	Active            bool
+}
+
 var ErrNotFound = errors.New("not found")
 var ErrConflict = errors.New("conflict")
 
@@ -172,6 +186,50 @@ func (s *Store) GetMyEntry(ctx context.Context, clerkID string) (Entry, error) {
 	return entry, nil
 }
 
+// ListEntriesForActiveYear returns every entry for the currently active
+// tournament year. This supports the public entries view once the tournament
+// has started.
+func (s *Store) ListEntriesForActiveYear(ctx context.Context) ([]Entry, error) {
+	const query = `
+		SELECT
+			e.id::text,
+			e.year,
+			e.clerk_id,
+			e.display_name,
+			e.picks,
+			e.in_overs,
+			e.locked,
+			e.created_at,
+			e.updated_at
+		FROM entries e
+		INNER JOIN tournament_config tc
+			ON tc.year = e.year
+		WHERE tc.active = true
+		ORDER BY e.display_name ASC, e.created_at ASC
+	`
+
+	rows, err := s.pool.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("list entries for active year: %w", err)
+	}
+	defer rows.Close()
+
+	entries := []Entry{}
+	for rows.Next() {
+		entry, err := scanEntryRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		entries = append(entries, entry)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate active entries: %w", err)
+	}
+
+	return entries, nil
+}
+
 // GetActiveConfig returns the config row for the tournament year currently
 // marked active. This is the config entry routes should use when operating on
 // the live pool instead of requiring clients to supply a year separately.
@@ -285,6 +343,7 @@ func (s *Store) CreateEntry(ctx context.Context, params CreateEntryParams) (Entr
 	return entry, nil
 }
 
+<<<<<<< HEAD
 // GetEntryByID returns a single entry regardless of user ownership. Handlers
 // can layer permission checks on top of this without duplicating fetch logic.
 func (s *Store) GetEntryByID(ctx context.Context, id string) (Entry, error) {
@@ -341,6 +400,37 @@ func (s *Store) UpdateEntry(ctx context.Context, params UpdateEntryParams) (Entr
 			return Entry{}, ErrNotFound
 		}
 		return Entry{}, fmt.Errorf("update entry %s: %w", params.ID, err)
+=======
+func scanEntryRow(scanner interface {
+	Scan(dest ...any) error
+}) (Entry, error) {
+	var entry Entry
+	var picksRaw []byte
+
+	err := scanner.Scan(
+		&entry.ID,
+		&entry.Year,
+		&entry.ClerkID,
+		&entry.DisplayName,
+		&picksRaw,
+		&entry.InOvers,
+		&entry.Locked,
+		&entry.CreatedAt,
+		&entry.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return Entry{}, ErrNotFound
+		}
+
+		return Entry{}, err
+	}
+
+	if len(picksRaw) > 0 {
+		if err := json.Unmarshal(picksRaw, &entry.Picks); err != nil {
+			return Entry{}, fmt.Errorf("decode entry picks json: %w", err)
+		}
+>>>>>>> origin/main
 	}
 
 	return entry, nil
@@ -369,6 +459,74 @@ func (s *Store) GetConfig(ctx context.Context, year int) (TournamentConfig, erro
 	`
 
 	return s.getConfigByQuery(ctx, query, year)
+}
+
+// UpdateTournamentConfig updates the editable configuration row for a given year.
+// Keeping this as one typed function makes the admin workflow explicit and
+// keeps JSON and numeric marshaling out of the handler layer.
+func (s *Store) UpdateTournamentConfig(ctx context.Context, params UpdateTournamentConfigParams) (TournamentConfig, error) {
+	groupsJSON, err := json.Marshal(params.Groups)
+	if err != nil {
+		return TournamentConfig{}, fmt.Errorf("encode groups json: %w", err)
+	}
+
+	payoutsJSON, err := json.Marshal(params.PoolPayouts)
+	if err != nil {
+		return TournamentConfig{}, fmt.Errorf("encode pool payouts json: %w", err)
+	}
+
+	const query = `
+		UPDATE tournament_config
+		SET
+			entry_deadline = $2,
+			start_date = $3,
+			end_date = $4,
+			groups = $5::jsonb,
+			mutt_multiplier = $6::numeric,
+			old_mutt_multiplier = $7::numeric,
+			pool_payouts = $8::jsonb,
+			frl_winner = $9,
+			frl_payout = $10,
+			active = $11
+		WHERE year = $1
+		RETURNING
+			year,
+			entry_deadline,
+			start_date,
+			end_date,
+			groups,
+			mutt_multiplier::text,
+			old_mutt_multiplier::text,
+			pool_payouts,
+			frl_winner,
+			frl_payout,
+			active
+	`
+
+	cfg, err := s.getConfigByQuery(
+		ctx,
+		query,
+		params.Year,
+		params.EntryDeadline,
+		params.StartDate,
+		params.EndDate,
+		string(groupsJSON),
+		params.MuttMultiplier,
+		params.OldMuttMultiplier,
+		string(payoutsJSON),
+		params.FRLWinner,
+		params.FRLPayout,
+		params.Active,
+	)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return TournamentConfig{}, ErrNotFound
+		}
+
+		return TournamentConfig{}, fmt.Errorf("update tournament config for year %d: %w", params.Year, err)
+	}
+
+	return cfg, nil
 }
 
 func (s *Store) getConfigByQuery(ctx context.Context, query string, args ...any) (TournamentConfig, error) {
