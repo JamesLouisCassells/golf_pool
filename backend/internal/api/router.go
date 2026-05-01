@@ -18,15 +18,11 @@ type Store interface {
 	GetConfig(ctx context.Context, year int) (db.TournamentConfig, error)
 	GetActiveConfig(ctx context.Context) (db.TournamentConfig, error)
 	GetMyEntry(ctx context.Context, clerkID string) (db.Entry, error)
-<<<<<<< HEAD
 	GetEntryByID(ctx context.Context, id string) (db.Entry, error)
-	CreateEntry(ctx context.Context, params db.CreateEntryParams) (db.Entry, error)
-	UpdateEntry(ctx context.Context, params db.UpdateEntryParams) (db.Entry, error)
-=======
 	ListEntriesForActiveYear(ctx context.Context) ([]db.Entry, error)
 	CreateEntry(ctx context.Context, params db.CreateEntryParams) (db.Entry, error)
+	UpdateEntry(ctx context.Context, params db.UpdateEntryParams) (db.Entry, error)
 	UpdateTournamentConfig(ctx context.Context, params db.UpdateTournamentConfigParams) (db.TournamentConfig, error)
->>>>>>> origin/main
 }
 
 type Handler struct {
@@ -39,9 +35,8 @@ type createEntryRequest struct {
 	InOvers     bool           `json:"in_overs"`
 }
 
-<<<<<<< HEAD
 type updateEntryRequest = createEntryRequest
-=======
+
 type updateTournamentConfigRequest struct {
 	EntryDeadline     *time.Time     `json:"entry_deadline"`
 	StartDate         *time.Time     `json:"start_date"`
@@ -54,7 +49,6 @@ type updateTournamentConfigRequest struct {
 	FRLPayout         int            `json:"frl_payout"`
 	Active            bool           `json:"active"`
 }
->>>>>>> origin/main
 
 // NewRouter wires the HTTP surface for the API.
 // Keeping route setup in one place makes it easier to see what the server
@@ -69,12 +63,9 @@ func NewRouter(store Store, authMiddleware *auth.Middleware) http.Handler {
 	r.With(authMiddleware.RequireAuth).Get("/api/me", h.me)
 	r.With(authMiddleware.RequireAuth).Get("/api/entries/mine", h.getMyEntry)
 	r.With(authMiddleware.RequireAuth).Post("/api/entries", h.createEntry)
-<<<<<<< HEAD
 	r.With(authMiddleware.RequireAuth).Put("/api/entries/{id}", h.updateEntry)
-=======
 	r.With(authMiddleware.RequireAdmin).Get("/api/admin/config/{year}", h.getAdminConfig)
 	r.With(authMiddleware.RequireAdmin).Put("/api/admin/config/{year}", h.updateAdminConfig)
->>>>>>> origin/main
 
 	return r
 }
@@ -268,7 +259,6 @@ func (h Handler) createEntry(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-<<<<<<< HEAD
 func (h Handler) updateEntry(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -322,24 +312,11 @@ func (h Handler) updateEntry(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var request updateEntryRequest
-=======
-func (h Handler) updateAdminConfig(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	year, err := strconv.Atoi(chi.URLParam(r, "year"))
-	if err != nil {
-		http.Error(w, "year must be a valid integer", http.StatusBadRequest)
-		return
-	}
-
-	var request updateTournamentConfigRequest
->>>>>>> origin/main
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		http.Error(w, "request body must be valid json", http.StatusBadRequest)
 		return
 	}
 
-<<<<<<< HEAD
 	request.DisplayName = strings.TrimSpace(request.DisplayName)
 	if request.DisplayName == "" {
 		request.DisplayName = existingEntry.DisplayName
@@ -366,7 +343,25 @@ func (h Handler) updateAdminConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewEncoder(w).Encode(updatedEntry); err != nil {
-=======
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
+}
+
+func (h Handler) updateAdminConfig(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	year, err := strconv.Atoi(chi.URLParam(r, "year"))
+	if err != nil {
+		http.Error(w, "year must be a valid integer", http.StatusBadRequest)
+		return
+	}
+
+	var request updateTournamentConfigRequest
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		http.Error(w, "request body must be valid json", http.StatusBadRequest)
+		return
+	}
+
 	if len(request.Groups) == 0 {
 		http.Error(w, "groups are required", http.StatusBadRequest)
 		return
@@ -406,7 +401,6 @@ func (h Handler) updateAdminConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewEncoder(w).Encode(cfg); err != nil {
->>>>>>> origin/main
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 	}
 }

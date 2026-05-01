@@ -343,7 +343,6 @@ func (s *Store) CreateEntry(ctx context.Context, params CreateEntryParams) (Entr
 	return entry, nil
 }
 
-<<<<<<< HEAD
 // GetEntryByID returns a single entry regardless of user ownership. Handlers
 // can layer permission checks on top of this without duplicating fetch logic.
 func (s *Store) GetEntryByID(ctx context.Context, id string) (Entry, error) {
@@ -400,7 +399,11 @@ func (s *Store) UpdateEntry(ctx context.Context, params UpdateEntryParams) (Entr
 			return Entry{}, ErrNotFound
 		}
 		return Entry{}, fmt.Errorf("update entry %s: %w", params.ID, err)
-=======
+	}
+
+	return entry, nil
+}
+
 func scanEntryRow(scanner interface {
 	Scan(dest ...any) error
 }) (Entry, error) {
@@ -430,7 +433,6 @@ func scanEntryRow(scanner interface {
 		if err := json.Unmarshal(picksRaw, &entry.Picks); err != nil {
 			return Entry{}, fmt.Errorf("decode entry picks json: %w", err)
 		}
->>>>>>> origin/main
 	}
 
 	return entry, nil

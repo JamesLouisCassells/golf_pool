@@ -30,9 +30,9 @@ A ground-up rewrite of the Masters Pool app. Goals: clean maintainable codebase,
 - Vue 3 with single-file components (`.vue`) — component-based, easy to learn
 - Vite for build tooling — fast, minimal config
 - Vue Router for client-side navigation
-- Tailwind CSS — already in use, carry it forward
-- Clerk Vue SDK for auth state and login/logout
-- The existing entry cards, side leaderboard, and standings layout port directly into Vue components with minimal changes
+- Custom CSS is currently in use; Tailwind remains optional rather than adopted
+- Clerk Vue SDK is still planned for auth state and login/logout
+- The existing entry cards, side leaderboard, and standings layout are still intended to be ported into Vue components
 
 ### Auth — Clerk
 - Handles all login flows: email/password, Google OAuth, GitHub OAuth
@@ -95,7 +95,6 @@ masters-pool/
 │       └── admin/            # admin-only handlers
 │
 ├── frontend/
-│   ├── Dockerfile            # node build stage → nginx:alpine
 │   ├── vite.config.js        # proxy /api/* to :8080 in dev
 │   ├── index.html
 │   └── src/
@@ -108,11 +107,6 @@ masters-pool/
 │       │   ├── Enter.vue      # entry creation / edit
 │       │   ├── Entries.vue    # all entries view
 │       │   └── Admin.vue
-│       └── components/
-│           ├── EntryCard.vue       # ported from existing JS
-│           ├── SideLeaderboard.vue # ported from existing JS
-│           ├── GolferBadge.vue
-│           └── Countdown.vue
 │
 ├── deploy/
 │   ├── app/
@@ -123,8 +117,7 @@ masters-pool/
 │   └── postgres/
 │       └── cluster.yaml      # CNPG cluster + B2 backup config
 │
-├── docker-compose.yml
-└── Makefile
+└── backend/Dockerfile
 ```
 
 ---
@@ -183,6 +176,7 @@ active               BOOLEAN DEFAULT false
 |--------|-------|-------------|
 | GET | `/api/standings/:year` | Live leaderboard with payouts |
 | GET | `/api/config/:year` | Tournament dates, group definitions |
+| GET | `/api/entries` | View all entries after tournament start |
 
 ### Authenticated — any logged-in user
 
@@ -191,16 +185,16 @@ active               BOOLEAN DEFAULT false
 | POST | `/api/entries` | Create entry (before deadline) |
 | PUT | `/api/entries/:id` | Edit own entry (before deadline) |
 | GET | `/api/entries/mine` | View my entry |
-| GET | `/api/entries` | View all entries (after tournament starts only) |
+| GET | `/api/me` | Return the current authenticated user |
 
 ### Admin only
 
 | Method | Route | Description |
 |--------|-------|-------------|
+| GET/PUT | `/api/admin/config/:year` | Manage tournament config |
 | GET | `/api/admin/entries` | List all entries |
 | PUT | `/api/admin/entries/:id` | Edit any entry |
 | DELETE | `/api/admin/entries/:id` | Remove entry |
-| GET/PUT | `/api/admin/config/:year` | Manage tournament config |
 | POST | `/api/admin/refresh` | Trigger manual score refresh |
 | POST | `/api/admin/lock` | Lock all entries immediately |
 
@@ -212,9 +206,9 @@ active               BOOLEAN DEFAULT false
 |-------|------|------|
 | `/` | Home — links to years and current standings | Public |
 | `/standings` | Live leaderboard, auto-refreshes | Public |
-| `/enter` | Create or edit my entry | Required |
+| `/enter` | Create or edit my entry | Intended authenticated flow; currently workable via mock auth |
 | `/entries` | All entries for the year | Public (after tournament start) |
-| `/admin` | Admin panel | Admin role required |
+| `/admin` | Admin panel | Backend-enforced admin role; frontend route guard still pending |
 
 Login/logout is handled by Clerk's hosted UI — no custom login page needed.
 
@@ -222,13 +216,13 @@ Login/logout is handled by Clerk's hosted UI — no custom login page needed.
 
 ## Local Development
 
-`docker-compose.yml` runs three services:
+Target local development still assumes three services:
 
 - `postgres` — standard Postgres image
 - `api` — Go binary with hot-reload via `air`
 - `web` — Vite dev server with `/api/*` proxied to the Go container
 
-Clerk dev mode supports localhost redirect URLs out of the box.
+Today, local feature work is usually unblocked with mock auth while Clerk browser wiring is still pending.
 
 ---
 

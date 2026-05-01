@@ -8,20 +8,23 @@ The current architecture and long-term direction live in `PLAN.md`. The executio
 
 The repository currently has:
 
-- a Go backend scaffold in `backend/`
-- a Vue/Vite frontend scaffold in `frontend/`
+- a Go backend with config, auth, entry, and admin-config routes in `backend/`
+- a Vue/Vite frontend with routed `Home`, `Enter`, `Entries`, `Standings`, and `Admin` views in `frontend/`
 - Postgres migrations for `users`, `entries`, and `tournament_config`
 - a health endpoint at `GET /healthz`
 - a config endpoint at `GET /api/config/{year}`
+- mock auth for local development and Clerk JWT validation scaffolding for backend-protected routes
+- entry create/edit/read flows and a public entries listing once the tournament starts
+- an admin config form backed by admin-only config endpoints
 
-This is still an early project state. Auth, entry workflows, standings logic, admin features, and deployment are not complete yet.
+This is no longer just scaffold state, but it is still incomplete. Live standings, full admin operations, frontend auth integration, and deployment are still pending.
 
 ## Repository Structure
 
 ```text
 golf_pool/
 ├── backend/      # Go API, DB access, migrations
-├── frontend/     # Vue 3 + Vite frontend scaffold
+├── frontend/     # Vue 3 + Vite frontend app
 ├── deploy/       # Deployment manifests, to be filled in later
 ├── PLAN.md       # Target architecture and technical direction
 ├── TODO.MD       # Phased execution checklist
@@ -115,7 +118,7 @@ curl http://localhost:8080/api/config/2026
 
 ## Frontend
 
-The frontend now has an initial integrated entry page in `src/views/Enter.vue`.
+The frontend now has a routed app shell and initial data-backed views.
 
 To run it locally:
 
@@ -127,7 +130,7 @@ npm run dev
 
 What the current frontend does:
 
-- provides a router with `Home`, `Enter`, and `Standings` routes
+- provides a router with `Home`, `Enter`, `Entries`, `Standings`, and `Admin` routes
 - provides an `Entries` route backed by the public entries endpoint
 - provides an `Admin` route backed by admin-only config endpoints
 - loads `GET /api/config/:year`
@@ -142,22 +145,20 @@ What is still missing:
 
 - real Clerk auth state in the browser
 - live standings integration
-- entries and admin views
+- admin route-guarding in the frontend
+- polish around loading, error, and mobile states
 
 ## Current Auth Slice
 
-The first protected backend route now exists:
+The protected backend surface currently includes:
 
 - `GET /api/me`
 - `GET /api/entries/mine`
 - `GET /api/entries`
 - `POST /api/entries`
-<<<<<<< HEAD
 - `PUT /api/entries/:id`
-=======
 - `GET /api/admin/config/:year`
 - `PUT /api/admin/config/:year`
->>>>>>> origin/main
 
 What it does today:
 
@@ -171,11 +172,8 @@ What it does today:
 - returns the authenticated user's entry for the active tournament year when one exists
 - returns the public active-year entry list after the tournament has started
 - creates an entry for the active tournament year before the deadline and blocks duplicates
-<<<<<<< HEAD
 - updates an owned active-year entry before the deadline and blocks cross-user edits
-=======
 - allows admin-only reads and updates of tournament config
->>>>>>> origin/main
 
 What is still incomplete:
 
@@ -239,9 +237,9 @@ That means the repo should show not just code, but decision-making:
 
 The next major work areas are:
 
-- finish Phase 2 database functions
-- add Clerk auth scaffolding
-- build entry creation and tournament config workflows
-- connect the frontend to real backend data
+- finish Clerk integration in the browser
+- add remaining admin entry-management routes
+- build standings ingestion and payout logic
+- package local dev and deployment workflows
 
 For the detailed step-by-step plan, use `TODO.MD`.
