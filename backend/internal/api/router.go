@@ -22,6 +22,7 @@ type Store interface {
 	ListEntriesForActiveYear(ctx context.Context) ([]db.Entry, error)
 	CreateEntry(ctx context.Context, params db.CreateEntryParams) (db.Entry, error)
 	UpdateEntry(ctx context.Context, params db.UpdateEntryParams) (db.Entry, error)
+	DeleteEntry(ctx context.Context, id string) error
 	UpdateTournamentConfig(ctx context.Context, params db.UpdateTournamentConfigParams) (db.TournamentConfig, error)
 }
 
@@ -66,6 +67,9 @@ func NewRouter(store Store, authMiddleware *auth.Middleware) http.Handler {
 	r.With(authMiddleware.RequireAuth).Put("/api/entries/{id}", h.updateEntry)
 	r.With(authMiddleware.RequireAdmin).Get("/api/admin/config/{year}", h.getAdminConfig)
 	r.With(authMiddleware.RequireAdmin).Put("/api/admin/config/{year}", h.updateAdminConfig)
+	r.With(authMiddleware.RequireAdmin).Get("/api/admin/entries", h.listAdminEntries)
+	r.With(authMiddleware.RequireAdmin).Put("/api/admin/entries/{id}", h.updateAdminEntry)
+	r.With(authMiddleware.RequireAdmin).Delete("/api/admin/entries/{id}", h.deleteAdminEntry)
 
 	return r
 }
@@ -403,6 +407,96 @@ func (h Handler) updateAdminConfig(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(cfg); err != nil {
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 	}
+}
+
+func (h Handler) listAdminEntries(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	entries, err := h.store.ListEntriesForActiveYear(r.Context())
+	if err != nil {
+		http.Error(w, "failed to load admin entries", http.StatusInternalServerError)
+		return
+	}
+
+	if err := json.NewEncoder(w).Encode(entries); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
+}
+
+func (h Handler) updateAdminEntry(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	entryID := chi.URLParam(r, "id")
+	if strings.TrimSpace(entryID) == "" {
+		http.Error(w, "entry id is required", http.StatusBadRequest)
+		return
+	}
+
+	existingEntry, err := h.store.GetEntryByID(r.Context(), entryID)
+	if err != nil {
+		if err == db.ErrNotFound {
+			http.Error(w, "entry not found", http.StatusNotFound)
+			return
+		}
+
+		http.Error(w, "failed to load entry", http.StatusInternalServerError)
+		return
+	}
+
+	var request updateEntryRequest
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		http.Error(w, "request body must be valid json", http.StatusBadRequest)
+		return
+	}
+
+	request.DisplayName = strings.TrimSpace(request.DisplayName)
+	if request.DisplayName == "" {
+		request.DisplayName = existingEntry.DisplayName
+	}
+	if len(request.Picks) == 0 {
+		http.Error(w, "picks are required", http.StatusBadRequest)
+		return
+	}
+
+	updatedEntry, err := h.store.UpdateEntry(r.Context(), db.UpdateEntryParams{
+		ID:          existingEntry.ID,
+		DisplayName: request.DisplayName,
+		Picks:       request.Picks,
+		InOvers:     request.InOvers,
+	})
+	if err != nil {
+		if err == db.ErrNotFound {
+			http.Error(w, "entry not found", http.StatusNotFound)
+			return
+		}
+
+		http.Error(w, "failed to update entry", http.StatusInternalServerError)
+		return
+	}
+
+	if err := json.NewEncoder(w).Encode(updatedEntry); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
+}
+
+func (h Handler) deleteAdminEntry(w http.ResponseWriter, r *http.Request) {
+	entryID := chi.URLParam(r, "id")
+	if strings.TrimSpace(entryID) == "" {
+		http.Error(w, "entry id is required", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.store.DeleteEntry(r.Context(), entryID); err != nil {
+		if err == db.ErrNotFound {
+			http.Error(w, "entry not found", http.StatusNotFound)
+			return
+		}
+
+		http.Error(w, "failed to delete entry", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func deadlinePassed(deadline *time.Time, now time.Time) bool {

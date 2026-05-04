@@ -404,6 +404,26 @@ func (s *Store) UpdateEntry(ctx context.Context, params UpdateEntryParams) (Entr
 	return entry, nil
 }
 
+// DeleteEntry removes a single entry by ID. Admin routes can use this to clean
+// up mistaken submissions without needing direct SQL in the handler layer.
+func (s *Store) DeleteEntry(ctx context.Context, id string) error {
+	const query = `
+		DELETE FROM entries
+		WHERE id = $1
+	`
+
+	commandTag, err := s.pool.Exec(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("delete entry %s: %w", id, err)
+	}
+
+	if commandTag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+
+	return nil
+}
+
 func scanEntryRow(scanner interface {
 	Scan(dest ...any) error
 }) (Entry, error) {

@@ -409,6 +409,13 @@ textarea:disabled {
   padding-top: 4px;
 }
 
+.entry-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .helper-copy {
   max-width: 42rem;
 }
@@ -438,10 +445,24 @@ textarea:disabled {
   cursor: not-allowed;
 }
 
+.danger-button {
+  border: none;
+  border-radius: 999px;
+  padding: 15px 24px;
+  background: var(--danger);
+  color: #fff8f5;
+  font-weight: 700;
+}
+
 .submit-button:disabled {
   opacity: 0.58;
   cursor: not-allowed;
   box-shadow: none;
+}
+
+.danger-button:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
 }
 
 @media (max-width: 900px) {

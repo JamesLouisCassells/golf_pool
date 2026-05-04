@@ -21,6 +21,7 @@ type stubStore struct {
 	listEntriesFn     func(ctx context.Context) ([]db.Entry, error)
 	createEntryFn     func(ctx context.Context, params db.CreateEntryParams) (db.Entry, error)
 	updateEntryFn     func(ctx context.Context, params db.UpdateEntryParams) (db.Entry, error)
+	deleteEntryFn     func(ctx context.Context, id string) error
 	updateConfigFn    func(ctx context.Context, params db.UpdateTournamentConfigParams) (db.TournamentConfig, error)
 }
 
@@ -78,6 +79,14 @@ func (s stubStore) UpdateEntry(ctx context.Context, params db.UpdateEntryParams)
 	}
 
 	return s.updateEntryFn(ctx, params)
+}
+
+func (s stubStore) DeleteEntry(ctx context.Context, id string) error {
+	if s.deleteEntryFn == nil {
+		return errors.New("unexpected DeleteEntry call")
+	}
+
+	return s.deleteEntryFn(ctx, id)
 }
 
 func (s stubStore) UpdateTournamentConfig(ctx context.Context, params db.UpdateTournamentConfigParams) (db.TournamentConfig, error) {
@@ -237,6 +246,131 @@ func TestAdminConfigUpdateSucceedsForAdmin(t *testing.T) {
 
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+	}
+}
+
+func TestAdminEntriesRouteReturnsForbiddenForNonAdmin(t *testing.T) {
+	t.Parallel()
+
+	router := NewRouter(stubStore{}, auth.NewMiddleware(nil, auth.Config{
+		MockEnabled: true,
+		MockClerkID: "dev-user",
+		MockEmail:   "dev@example.com",
+		MockAdmin:   false,
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/api/admin/entries", nil)
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusForbidden {
+		t.Fatalf("expected status %d, got %d", http.StatusForbidden, recorder.Code)
+	}
+}
+
+func TestAdminEntriesRouteReturnsEntriesForAdmin(t *testing.T) {
+	t.Parallel()
+
+	store := stubStore{
+		listEntriesFn: func(ctx context.Context) ([]db.Entry, error) {
+			return []db.Entry{
+				{ID: "entry-1", Year: 2026, DisplayName: "James", Picks: map[string]any{"Group 1": "Scheffler"}},
+			}, nil
+		},
+	}
+
+	router := NewRouter(store, auth.NewMiddleware(nil, auth.Config{
+		MockEnabled: true,
+		MockClerkID: "admin-user",
+		MockEmail:   "admin@example.com",
+		MockAdmin:   true,
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/api/admin/entries", nil)
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+	}
+}
+
+func TestAdminEntryUpdateSucceedsForAdmin(t *testing.T) {
+	t.Parallel()
+
+	store := stubStore{
+		getEntryByIDFn: func(ctx context.Context, id string) (db.Entry, error) {
+			return db.Entry{
+				ID:          id,
+				Year:        2026,
+				DisplayName: "Existing Name",
+				Picks:       map[string]any{"Group 1": "Spieth"},
+			}, nil
+		},
+		updateEntryFn: func(ctx context.Context, params db.UpdateEntryParams) (db.Entry, error) {
+			if params.ID != "entry-1" {
+				t.Fatalf("expected entry id entry-1, got %s", params.ID)
+			}
+			if params.DisplayName != "James" {
+				t.Fatalf("expected display name James, got %s", params.DisplayName)
+			}
+
+			return db.Entry{
+				ID:          params.ID,
+				Year:        2026,
+				DisplayName: params.DisplayName,
+				Picks:       params.Picks,
+				InOvers:     params.InOvers,
+			}, nil
+		},
+	}
+
+	router := NewRouter(store, auth.NewMiddleware(nil, auth.Config{
+		MockEnabled: true,
+		MockClerkID: "admin-user",
+		MockEmail:   "admin@example.com",
+		MockAdmin:   true,
+	}))
+
+	req := httptest.NewRequest(http.MethodPut, "/api/admin/entries/entry-1", bytes.NewBufferString(`{"display_name":"James","picks":{"Group 1":"Scheffler"},"in_overs":true}`))
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+	}
+}
+
+func TestAdminEntryDeleteReturnsNoContentForAdmin(t *testing.T) {
+	t.Parallel()
+
+	store := stubStore{
+		deleteEntryFn: func(ctx context.Context, id string) error {
+			if id != "entry-1" {
+				t.Fatalf("expected entry id entry-1, got %s", id)
+			}
+
+			return nil
+		},
+	}
+
+	router := NewRouter(store, auth.NewMiddleware(nil, auth.Config{
+		MockEnabled: true,
+		MockClerkID: "admin-user",
+		MockEmail:   "admin@example.com",
+		MockAdmin:   true,
+	}))
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/admin/entries/entry-1", nil)
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusNoContent {
+		t.Fatalf("expected status %d, got %d", http.StatusNoContent, recorder.Code)
 	}
 }
 
