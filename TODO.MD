@@ -22,7 +22,8 @@ Get the skeleton in place before writing any real logic.
 
 ### Vue frontend scaffold
 - [x] `npm create vite@latest` with Vue template
-- [ ] Install Clerk Vue SDK and wire auth state through the app
+- [ ] Install Clerk Vue SDK and initialize it in the app shell
+- [ ] Add login/logout controls and app-wide auth state from Clerk
 - [ ] Decide whether to adopt Tailwind or keep the current custom CSS approach
 - [x] Stub out views: `Entries`, `Admin`
 - [x] Stub out views: `Home`, `Standings`, `Enter`
@@ -48,7 +49,7 @@ Get the skeleton in place before writing any real logic.
 - [x] Add DB connection pool to Go (`pgxpool`), log success on startup
 - [x] Add typed config and user queries in `db/` (`GetConfig`, `GetUser`, `UpsertUser`)
 - [x] Add typed entry lifecycle and listing queries (`CreateEntry`, entry lookup/update, active-year list)
-- [ ] Add remaining typed query functions (`config update`, standings reads, admin entry operations)
+- [ ] Add remaining typed query functions (`standings reads`, future admin lock/refresh operations)
 
 ### Clerk auth
 - [ ] Create Clerk account, set up application, enable Google + email/password providers
@@ -56,8 +57,10 @@ Get the skeleton in place before writing any real logic.
 - [x] Write initial `auth/` middleware: fetch Clerk JWKS and validate JWT on incoming requests
 - [x] Write initial `requireAdmin` middleware: check for admin role claim in token
 - [x] Add temporary mock auth mode so protected routes can be developed before Clerk is fully wired
-- [ ] Test end-to-end with a real valid Clerk token and confirm local `users` upsert
-- [ ] Add Clerk Vue SDK to frontend — implement login/logout, expose auth state app-wide
+- [ ] Add custom Clerk session claims for email, display name, and admin role/flag
+- [ ] Update backend auth docs/config assumptions so Clerk Backend API lookup is fallback-only
+- [ ] Test end-to-end with a real Clerk browser session and confirm local `users` upsert
+- [ ] Make sure protected frontend requests use the real Clerk session instead of mock auth
 - [x] On authenticated API requests, upsert a `users` row using the Clerk user ID and email
 
 ---
@@ -100,15 +103,15 @@ Get the skeleton in place before writing any real logic.
 
 - [x] `GET /api/admin/config/:year` — load config for admin editing
 - [x] `PUT /api/admin/config/:year` — update config as admin
-- [ ] `GET /api/admin/entries` — list all entries for the active year
-- [ ] `PUT /api/admin/entries/:id` — edit any entry (admin override)
-- [ ] `DELETE /api/admin/entries/:id` — delete entry
+- [x] `GET /api/admin/entries` — list all entries for the active year
+- [x] `PUT /api/admin/entries/:id` — edit any entry (admin override)
+- [x] `DELETE /api/admin/entries/:id` — delete entry
 - [ ] `POST /api/admin/lock` — lock all entries (sets deadline to now)
 - [ ] `POST /api/admin/refresh` — manually trigger a score data refresh
 - [ ] `Admin.vue`: entry table with edit/delete actions, refresh + lock buttons
 - [x] `Admin.vue`: config form for tournament settings
 - [ ] Guard `/admin` route in Vue Router — redirect non-admins to home
-- [ ] Guard admin API routes in Go middleware — return `403` for non-admins
+- [x] Guard admin API routes in Go middleware — return `403` for non-admins
 
 ---
 
@@ -137,4 +140,4 @@ Get the skeleton in place before writing any real logic.
 - [ ] Navigation: consistent nav bar across all pages with real login/logout state
 - [ ] Mobile responsive check on all pages
 - [ ] Basic error handling — friendly messages for API failures and loading states
-- [ ] Smoke test full flow: register, create entry, view standings, admin edits entry, lock all entries
+- [ ] Smoke test full flow: sign in with Clerk, create entry, view standings, admin edits entry, lock all entries

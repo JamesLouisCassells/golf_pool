@@ -37,7 +37,10 @@ A ground-up rewrite of the Masters Pool app. Goals: clean maintainable codebase,
 ### Auth — Clerk
 - Handles all login flows: email/password, Google OAuth, GitHub OAuth
 - Free tier up to 10,000 MAU
-- Go backend validates JWTs only — no passwords or auth data stored locally
+- Clerk should be initialized in the Vue frontend so the browser owns sign-in and session state
+- Go backend should validate Clerk session JWTs locally against JWKS — no passwords or auth data stored locally
+- The backend should avoid depending on Clerk Backend API lookups during ordinary authenticated requests
+- Small custom session claims should carry the identity fields the API needs most often
 - Admin role is a custom claim set in Clerk's dashboard, checked by Go middleware
 
 ### Database — PostgreSQL
@@ -73,6 +76,7 @@ A ground-up rewrite of the Masters Pool app. Goals: clean maintainable codebase,
 External:
   Browser  → Clerk    (login UI / JWT issuance)
   Go API   → Clerk    (JWKS endpoint for JWT validation)
+  Go API   → Clerk    (Backend API only when claims are missing and profile fallback is needed)
   Go API   → RapidAPI (golf scores, polled on schedule)
   CNPG     → Backblaze B2 (WAL + base backups)
 ```
@@ -212,6 +216,14 @@ active               BOOLEAN DEFAULT false
 
 Login/logout is handled by Clerk's hosted UI — no custom login page needed.
 
+For routine authenticated API traffic, the intended design is:
+
+- Clerk session established in the frontend
+- session token presented to the API by cookie or bearer token
+- backend verifies the token locally
+- backend upserts or reads the local `users` row
+- backend avoids per-request Clerk profile lookups
+
 ---
 
 ## Local Development
@@ -223,6 +235,13 @@ Target local development still assumes three services:
 - `web` — Vite dev server with `/api/*` proxied to the Go container
 
 Today, local feature work is usually unblocked with mock auth while Clerk browser wiring is still pending.
+
+The target next step is to replace that temporary path with:
+
+- Clerk Vue SDK in the frontend
+- real browser sign-in locally
+- `MOCK_AUTH_ENABLED=false` during Clerk proof work
+- custom session claims so the backend rarely needs Clerk Backend API calls
 
 ---
 
