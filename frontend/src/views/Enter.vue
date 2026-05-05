@@ -1,6 +1,8 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 
+import { apiFetch, responseMessage } from '../lib/api'
+
 const activeYear = new Date().getFullYear()
 
 const loading = ref(true)
@@ -84,7 +86,7 @@ async function loadPage() {
   successMessage.value = ''
 
   try {
-    const configResponse = await fetch(`/api/config/${activeYear}`)
+    const configResponse = await apiFetch(`/api/config/${activeYear}`)
     if (!configResponse.ok) {
       throw new Error(await responseMessage(configResponse, 'Failed to load tournament config.'))
     }
@@ -94,7 +96,7 @@ async function loadPage() {
 
     initializeEmptyPicks(configPayload.groups)
 
-    const entryResponse = await fetch('/api/entries/mine')
+    const entryResponse = await apiFetch('/api/entries/mine')
     if (entryResponse.status === 404) {
       existingEntry.value = null
       form.displayName = ''
@@ -172,7 +174,7 @@ async function submitEntry() {
     const target = existingEntry.value ? `/api/entries/${existingEntry.value.id}` : '/api/entries'
     const method = existingEntry.value ? 'PUT' : 'POST'
 
-    const response = await fetch(target, {
+    const response = await apiFetch(target, {
       method,
       headers: {
         'Content-Type': 'application/json',
@@ -247,10 +249,6 @@ function normalizePlayerOption(player) {
   return null
 }
 
-async function responseMessage(response, fallback) {
-  const text = (await response.text()).trim()
-  return text || fallback
-}
 </script>
 
 <template>

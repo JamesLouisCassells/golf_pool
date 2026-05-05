@@ -343,7 +343,6 @@ func (s *Store) CreateEntry(ctx context.Context, params CreateEntryParams) (Entr
 	return entry, nil
 }
 
-<<<<<<< HEAD
 // GetEntryByID returns a single entry regardless of user ownership. Handlers
 // can layer permission checks on top of this without duplicating fetch logic.
 func (s *Store) GetEntryByID(ctx context.Context, id string) (Entry, error) {
@@ -400,7 +399,31 @@ func (s *Store) UpdateEntry(ctx context.Context, params UpdateEntryParams) (Entr
 			return Entry{}, ErrNotFound
 		}
 		return Entry{}, fmt.Errorf("update entry %s: %w", params.ID, err)
-=======
+	}
+
+	return entry, nil
+}
+
+// DeleteEntry removes a single entry by ID. Admin routes can use this to clean
+// up mistaken submissions without needing direct SQL in the handler layer.
+func (s *Store) DeleteEntry(ctx context.Context, id string) error {
+	const query = `
+		DELETE FROM entries
+		WHERE id = $1
+	`
+
+	commandTag, err := s.pool.Exec(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("delete entry %s: %w", id, err)
+	}
+
+	if commandTag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+
+	return nil
+}
+
 func scanEntryRow(scanner interface {
 	Scan(dest ...any) error
 }) (Entry, error) {
@@ -430,7 +453,6 @@ func scanEntryRow(scanner interface {
 		if err := json.Unmarshal(picksRaw, &entry.Picks); err != nil {
 			return Entry{}, fmt.Errorf("decode entry picks json: %w", err)
 		}
->>>>>>> origin/main
 	}
 
 	return entry, nil

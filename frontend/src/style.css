@@ -72,7 +72,44 @@ button {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
   margin-bottom: 20px;
+}
+
+.auth-controls {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.auth-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 6px 10px 6px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 253, 247, 0.72);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.app-alert {
+  margin-bottom: 20px;
+}
+
+.clerk-panel {
+  display: flex;
+  justify-content: center;
 }
 
 .nav-link {
@@ -409,6 +446,13 @@ textarea:disabled {
   padding-top: 4px;
 }
 
+.entry-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .helper-copy {
   max-width: 42rem;
 }
@@ -438,10 +482,24 @@ textarea:disabled {
   cursor: not-allowed;
 }
 
+.danger-button {
+  border: none;
+  border-radius: 999px;
+  padding: 15px 24px;
+  background: var(--danger);
+  color: #fff8f5;
+  font-weight: 700;
+}
+
 .submit-button:disabled {
   opacity: 0.58;
   cursor: not-allowed;
   box-shadow: none;
+}
+
+.danger-button:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
 }
 
 @media (max-width: 900px) {
@@ -453,7 +511,8 @@ textarea:disabled {
   }
 
   .topbar,
-  .form-footer {
+  .form-footer,
+  .toolbar {
     display: grid;
   }
 
