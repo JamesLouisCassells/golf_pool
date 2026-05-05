@@ -71,6 +71,17 @@ The backend currently expects:
 
 Mock auth and Clerk-related values are included in `.env.example`. Mock auth is still the temporary local-development path while the real Clerk browser flow is being wired.
 
+The frontend now also expects its own Vite env file when you want the real Clerk browser flow:
+
+```bash
+cd frontend
+cp .env.example .env
+```
+
+That file should include:
+
+- `VITE_CLERK_PUBLISHABLE_KEY`
+
 ## Running the Backend
 
 Start Postgres in Docker:
@@ -140,12 +151,16 @@ What the current frontend does:
 - submits `POST /api/entries` for a new entry
 - submits `PUT /api/entries/:id` for an existing entry
 - shows a countdown and locks the form after the deadline
+- conditionally initializes the Clerk Vue SDK when a publishable key is present
+- exposes login/logout controls in the app shell
+- routes signed-out users to a dedicated sign-in screen in Clerk mode
+- adds frontend guards for `/enter` and `/admin` in Clerk mode
+- attaches Clerk bearer tokens to protected API requests from one shared fetch helper
 
 What is still missing:
 
-- real Clerk auth state in the browser
 - live standings integration
-- admin route-guarding in the frontend
+- final end-to-end proof against a real Clerk instance
 - polish around loading, error, and mobile states
 
 ## Current Auth Slice
@@ -178,9 +193,9 @@ What it does today:
 
 What is still incomplete:
 
-- no frontend Clerk integration yet
-- frontend route-guarding for admin is still pending
+- the frontend Clerk wiring still needs real instance values
 - no end-to-end proof has been run yet with a real Clerk browser session
+- custom session claims still need to be configured in Clerk
 
 ## Revised Clerk Plan
 
@@ -256,7 +271,7 @@ Suggested local proof steps:
 
 1. In Clerk, add small custom session claims for email, display name, and admin role if needed.
 2. Run the backend with real Clerk values and set `MOCK_AUTH_ENABLED=false`.
-3. Wire the Clerk Vue SDK into the frontend and sign in through the browser.
+3. In `frontend/.env`, set `VITE_CLERK_PUBLISHABLE_KEY` and sign in through the browser.
 4. Call `GET /api/me` through the app flow and confirm the local `users` row is inserted or updated in Postgres.
 5. Keep the Backend API profile fallback only for missing-claim edge cases.
 

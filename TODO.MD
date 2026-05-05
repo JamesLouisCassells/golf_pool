@@ -22,8 +22,8 @@ Get the skeleton in place before writing any real logic.
 
 ### Vue frontend scaffold
 - [x] `npm create vite@latest` with Vue template
-- [ ] Install Clerk Vue SDK and initialize it in the app shell
-- [ ] Add login/logout controls and app-wide auth state from Clerk
+- [x] Install Clerk Vue SDK and initialize it in the app shell
+- [x] Add login/logout controls and app-wide auth state from Clerk
 - [ ] Decide whether to adopt Tailwind or keep the current custom CSS approach
 - [x] Stub out views: `Entries`, `Admin`
 - [x] Stub out views: `Home`, `Standings`, `Enter`
@@ -60,7 +60,7 @@ Get the skeleton in place before writing any real logic.
 - [ ] Add custom Clerk session claims for email, display name, and admin role/flag
 - [ ] Update backend auth docs/config assumptions so Clerk Backend API lookup is fallback-only
 - [ ] Test end-to-end with a real Clerk browser session and confirm local `users` upsert
-- [ ] Make sure protected frontend requests use the real Clerk session instead of mock auth
+- [x] Make sure protected frontend requests use the real Clerk session instead of mock auth
 - [x] On authenticated API requests, upsert a `users` row using the Clerk user ID and email
 
 ---
@@ -110,7 +110,7 @@ Get the skeleton in place before writing any real logic.
 - [ ] `POST /api/admin/refresh` — manually trigger a score data refresh
 - [ ] `Admin.vue`: entry table with edit/delete actions, refresh + lock buttons
 - [x] `Admin.vue`: config form for tournament settings
-- [ ] Guard `/admin` route in Vue Router — redirect non-admins to home
+- [x] Guard `/admin` route in Vue Router — redirect non-admins to home
 - [x] Guard admin API routes in Go middleware — return `403` for non-admins
 
 ---

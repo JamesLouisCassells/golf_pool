@@ -1,6 +1,8 @@
 <script setup>
 import { computed, reactive, ref } from 'vue'
 
+import { apiFetch, responseMessage } from '../lib/api'
+
 const activeYear = new Date().getFullYear()
 
 const configLoading = ref(false)
@@ -47,7 +49,7 @@ async function loadConfig() {
   configSuccessMessage.value = ''
 
   try {
-    const response = await fetch(`/api/admin/config/${activeYear}`)
+    const response = await apiFetch(`/api/admin/config/${activeYear}`)
     if (!response.ok) {
       throw new Error(await responseMessage(response, 'Failed to load admin config.'))
     }
@@ -105,7 +107,7 @@ async function saveConfig() {
   configSaving.value = true
 
   try {
-    const response = await fetch(`/api/admin/config/${activeYear}`, {
+    const response = await apiFetch(`/api/admin/config/${activeYear}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -137,7 +139,7 @@ async function loadEntries() {
   entriesSuccessMessage.value = ''
 
   try {
-    const response = await fetch('/api/admin/entries')
+    const response = await apiFetch('/api/admin/entries')
     if (!response.ok) {
       throw new Error(await responseMessage(response, 'Failed to load admin entries.'))
     }
@@ -199,7 +201,7 @@ async function saveEntry(entry) {
   savingEntryId.value = entry.id
 
   try {
-    const response = await fetch(`/api/admin/entries/${entry.id}`, {
+    const response = await apiFetch(`/api/admin/entries/${entry.id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -238,7 +240,7 @@ async function deleteEntry(entry) {
   deletingEntryId.value = entry.id
 
   try {
-    const response = await fetch(`/api/admin/entries/${entry.id}`, {
+    const response = await apiFetch(`/api/admin/entries/${entry.id}`, {
       method: 'DELETE',
     })
 
@@ -280,10 +282,6 @@ function prettyJSON(value) {
   return JSON.stringify(value, null, 2)
 }
 
-async function responseMessage(response, fallback) {
-  const text = (await response.text()).trim()
-  return text || fallback
-}
 </script>
 
 <template>
