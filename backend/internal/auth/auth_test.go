@@ -52,6 +52,33 @@ func TestResolveProfileUsesTokenClaimsWhenPresent(t *testing.T) {
 	}
 }
 
+func TestResolveProfileUsesNestedTokenClaimsWhenPresent(t *testing.T) {
+	t.Parallel()
+
+	middleware := NewMiddleware(nil, Config{
+		EmailClaim: "user.primary_email",
+		NameClaim:  "user.display_name",
+	})
+
+	email, displayName, err := middleware.resolveProfile(context.Background(), tokenClaims{
+		Raw: map[string]any{
+			"user": map[string]any{
+				"primary_email": "james@example.com",
+				"display_name":  "James Cassells",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if email != "james@example.com" {
+		t.Fatalf("expected email james@example.com, got %s", email)
+	}
+	if displayName == nil || *displayName != "James Cassells" {
+		t.Fatalf("expected display name James Cassells, got %#v", displayName)
+	}
+}
+
 func TestResolveProfileFallsBackToClerkUserLookup(t *testing.T) {
 	t.Parallel()
 
@@ -115,6 +142,23 @@ func TestIsAdminRecognizesConfiguredClaim(t *testing.T) {
 
 	if !middleware.isAdmin(map[string]any{"role": "admin"}) {
 		t.Fatalf("expected admin role to be recognized")
+	}
+}
+
+func TestIsAdminRecognizesNestedBooleanClaim(t *testing.T) {
+	t.Parallel()
+
+	middleware := NewMiddleware(nil, Config{
+		AdminClaim: "app.is_admin",
+		AdminValue: "true",
+	})
+
+	if !middleware.isAdmin(map[string]any{
+		"app": map[string]any{
+			"is_admin": true,
+		},
+	}) {
+		t.Fatalf("expected nested boolean admin flag to be recognized")
 	}
 }
 
