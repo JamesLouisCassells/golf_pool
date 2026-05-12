@@ -228,7 +228,7 @@ What it does today:
 
 What is still incomplete:
 
-- the frontend Clerk wiring still needs real instance values
+- the frontend and backend now have real Clerk dev values locally, but the protected-route proof is still incomplete
 - no end-to-end proof has been run yet with a real Clerk browser session
 - custom session claims still need to be configured in Clerk
 
@@ -332,6 +332,20 @@ Suggested local proof steps:
 3. In `frontend/.env`, set `VITE_CLERK_PUBLISHABLE_KEY` and sign in through the browser.
 4. Call `GET /api/me` through the app flow and confirm the local `users` row is inserted or updated in Postgres.
 5. Keep the Backend API profile fallback only for missing-claim edge cases.
+
+### Current local checkpoint
+
+As of May 12, 2026, the local auth proof is partway through:
+
+- the root `.env` has real Clerk dev values and `MOCK_AUTH_ENABLED=false`
+- the frontend has a Clerk publishable key and the browser can reach a signed-in Clerk state
+- the Go API starts successfully against Postgres with the real env configuration
+- the first protected-route proof is still pending: `/enter`, `/api/me`, local `users` upsert, and admin-route behavior have not been confirmed yet
+
+Two shell pitfalls showed up during local startup:
+
+- `DATABASE_URL` must stay on one line and should be quoted in zsh when passed inline because `?` is treated as a glob
+- sourcing `.env` in zsh requires shell-safe values; names with spaces such as `MOCK_AUTH_NAME` should be quoted
 
 ## Learning Notes
 
