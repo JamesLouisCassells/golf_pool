@@ -46,7 +46,7 @@ const router = createRouter({
       },
     },
     {
-      path: '/sign-in',
+      path: '/sign-in/:pathMatch(.*)*',
       name: 'sign-in',
       component: SignInView,
     },

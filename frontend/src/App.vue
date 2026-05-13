@@ -4,7 +4,7 @@ import { useRoute } from 'vue-router'
 import { Show, UserButton } from '@clerk/vue'
 
 import ClerkBridge from './components/ClerkBridge.vue'
-import { authMode, currentBackendUser, isClerkEnabled } from './lib/auth'
+import { authMode, currentBackendUser, isClerkEnabled, isSignedIn } from './lib/auth'
 
 const route = useRoute()
 
@@ -47,7 +47,7 @@ const authBanner = computed(() => {
         <RouterLink to="/entries" class="nav-link">Entries</RouterLink>
         <RouterLink to="/admin" class="nav-link">Admin</RouterLink>
         <RouterLink to="/standings" class="nav-link">Standings</RouterLink>
-        <RouterLink v-if="authMode === 'clerk'" to="/sign-in" class="nav-link">Sign In</RouterLink>
+        <RouterLink v-if="authMode === 'clerk' && !isSignedIn" to="/sign-in" class="nav-link">Sign In</RouterLink>
       </nav>
 
       <div class="auth-controls">

@@ -93,7 +93,7 @@ To run the real browser auth flow locally:
    - `CLERK_SECRET_KEY=...`
    - `CLERK_JWKS_URL=https://<your-clerk-domain>/.well-known/jwks.json`
    - `CLERK_ISSUER=https://<your-clerk-domain>`
-   - `CLERK_AUTHORIZED_PARTIES=http://localhost:5173`
+   - `CLERK_AUTHORIZED_PARTIES=http://localhost:5173,http://127.0.0.1:5173`
 2. In `frontend/.env`, set:
    - `VITE_CLERK_PUBLISHABLE_KEY=...`
 3. In the Clerk dashboard, customize the session token so the backend can read the fields it expects without calling Clerk on every request.
