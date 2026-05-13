@@ -137,6 +137,11 @@ button {
   border-color: transparent;
 }
 
+.nav-link-ghost {
+  background: rgba(255, 253, 247, 0.72);
+  color: var(--ink);
+}
+
 .eyebrow,
 .kicker,
 .status-label {

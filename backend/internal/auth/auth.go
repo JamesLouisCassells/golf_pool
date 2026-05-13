@@ -331,7 +331,7 @@ func (m *Middleware) isAdmin(claims map[string]any) bool {
 		return false
 	}
 
-	value, ok := claims[m.config.AdminClaim]
+	value, ok := claimValue(claims, m.config.AdminClaim)
 	if !ok {
 		return false
 	}
@@ -339,6 +339,9 @@ func (m *Middleware) isAdmin(claims map[string]any) bool {
 	switch typed := value.(type) {
 	case string:
 		return typed == m.config.AdminValue
+	case bool:
+		expected, ok := parseBoolString(m.config.AdminValue)
+		return ok && typed == expected
 	case []any:
 		for _, item := range typed {
 			if text, ok := item.(string); ok && text == m.config.AdminValue {
@@ -579,11 +582,7 @@ func optionalString(value string) *string {
 }
 
 func claimString(claims map[string]any, key string) (string, bool) {
-	if key == "" {
-		return "", false
-	}
-
-	value, ok := claims[key]
+	value, ok := claimValue(claims, key)
 	if !ok {
 		return "", false
 	}
@@ -594,6 +593,40 @@ func claimString(claims map[string]any, key string) (string, bool) {
 	}
 
 	return strings.TrimSpace(text), true
+}
+
+func claimValue(claims map[string]any, key string) (any, bool) {
+	if key == "" {
+		return nil, false
+	}
+
+	current := any(claims)
+	for _, part := range strings.Split(key, ".") {
+		object, ok := current.(map[string]any)
+		if !ok {
+			return nil, false
+		}
+
+		value, ok := object[part]
+		if !ok {
+			return nil, false
+		}
+
+		current = value
+	}
+
+	return current, true
+}
+
+func parseBoolString(value string) (bool, bool) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "true", "1", "yes", "on":
+		return true, true
+	case "false", "0", "no", "off":
+		return false, true
+	default:
+		return false, false
+	}
 }
 
 func containsString(values []string, target string) bool {

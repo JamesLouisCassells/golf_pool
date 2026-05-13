@@ -41,6 +41,13 @@ Get the skeleton in place before writing any real logic.
 
 ## Phase 2 — Database & Auth
 
+Current priority before more feature work:
+
+- finish real local Clerk configuration
+- run the first browser sign-in proof with `MOCK_AUTH_ENABLED=false`
+- verify `/api/me`, `/enter`, and `/admin` against a live Clerk session
+- current checkpoint: backend starts cleanly against Postgres with real Clerk env values, but the protected-route proof has not been completed yet
+
 ### Postgres + migrations
 - [x] Install `golang-migrate` CLI
 - [x] Migration 001: create `users` table
@@ -52,14 +59,20 @@ Get the skeleton in place before writing any real logic.
 - [ ] Add remaining typed query functions (`standings reads`, future admin lock/refresh operations)
 
 ### Clerk auth
-- [ ] Create Clerk account, set up application, enable Google + email/password providers
-- [ ] Add Clerk publishable key and secret key to `.env`
+- [x] Create Clerk account, set up application, enable Google + email/password providers
+- [x] Add backend Clerk values to root `.env`
+- [x] Add `VITE_CLERK_PUBLISHABLE_KEY` to `frontend/.env`
 - [x] Write initial `auth/` middleware: fetch Clerk JWKS and validate JWT on incoming requests
 - [x] Write initial `requireAdmin` middleware: check for admin role claim in token
 - [x] Add temporary mock auth mode so protected routes can be developed before Clerk is fully wired
 - [ ] Add custom Clerk session claims for email, display name, and admin role/flag
 - [ ] Update backend auth docs/config assumptions so Clerk Backend API lookup is fallback-only
+- [x] Turn off mock auth locally for the live proof (`MOCK_AUTH_ENABLED=false`)
 - [ ] Test end-to-end with a real Clerk browser session and confirm local `users` upsert
+- [ ] Confirm signed-in users can load `/enter` and save through the real Clerk session
+- [ ] Confirm non-admin users are blocked from `/admin`
+- [ ] Confirm admin users can load `/admin`
+- [ ] Clean up local run instructions and shell-safe env examples after the first live proof
 - [x] Make sure protected frontend requests use the real Clerk session instead of mock auth
 - [x] On authenticated API requests, upsert a `users` row using the Clerk user ID and email
 

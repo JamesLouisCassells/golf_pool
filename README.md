@@ -82,6 +82,41 @@ That file should include:
 
 - `VITE_CLERK_PUBLISHABLE_KEY`
 
+### Real Clerk Local Setup
+
+This project uses Clerk in a Vue frontend and verifies Clerk session JWTs in the Go backend. It is not a Next.js integration, so there is no `proxy.ts`, no `ClerkProvider` in an App Router layout, and no `@clerk/nextjs` package involved here.
+
+To run the real browser auth flow locally:
+
+1. In the repo root `.env`, set:
+   - `MOCK_AUTH_ENABLED=false`
+   - `CLERK_SECRET_KEY=...`
+   - `CLERK_JWKS_URL=https://<your-clerk-domain>/.well-known/jwks.json`
+   - `CLERK_ISSUER=https://<your-clerk-domain>`
+   - `CLERK_AUTHORIZED_PARTIES=http://localhost:5173`
+2. In `frontend/.env`, set:
+   - `VITE_CLERK_PUBLISHABLE_KEY=...`
+3. In the Clerk dashboard, customize the session token so the backend can read the fields it expects without calling Clerk on every request.
+
+Recommended custom session token claims for this app:
+
+```json
+{
+  "email": "{{user.primary_email_address}}",
+  "name": "{{user.first_name}} {{user.last_name}}",
+  "role": "{{user.public_metadata.role}}"
+}
+```
+
+That matches the backend defaults in `.env.example`:
+
+- `CLERK_EMAIL_CLAIM=email`
+- `CLERK_NAME_CLAIM=name`
+- `CLERK_ADMIN_CLAIM=role`
+- `CLERK_ADMIN_VALUE=admin`
+
+For admin access, set `user.public_metadata.role` to `admin` in Clerk for the relevant user. After changing metadata, sign out and sign back in so a fresh session token includes the new claim.
+
 ## Running the Backend
 
 Start Postgres in Docker:
@@ -193,7 +228,7 @@ What it does today:
 
 What is still incomplete:
 
-- the frontend Clerk wiring still needs real instance values
+- the frontend and backend now have real Clerk dev values locally, but the protected-route proof is still incomplete
 - no end-to-end proof has been run yet with a real Clerk browser session
 - custom session claims still need to be configured in Clerk
 
@@ -233,6 +268,22 @@ For this app, the token should ideally carry:
 - display name
 - admin role or admin flag
 
+The current backend defaults expect these claim names:
+
+- `email`
+- `name`
+- `role`
+
+One workable Clerk session token customization for this project is:
+
+```json
+{
+  "email": "{{user.primary_email_address}}",
+  "name": "{{user.first_name}} {{user.last_name}}",
+  "role": "{{user.public_metadata.role}}"
+}
+```
+
 That removes the need to fetch a Clerk user profile during ordinary authenticated requests. Claims should stay small so cookie and session size does not become a problem.
 
 ## Mock Auth Dev Setup
@@ -267,6 +318,13 @@ Important:
 - If you want email, display name, and admin state to come directly from the token, add custom session token claims in Clerk that match `CLERK_EMAIL_CLAIM`, `CLERK_NAME_CLAIM`, and the configured admin claim.
 - If you do not add those claims, the backend can use `CLERK_SECRET_KEY` to fetch the user profile from Clerk's Backend API after token verification, but that should be the exception rather than the normal path.
 
+Suggested Clerk dashboard values for this repo:
+
+- session token `email` claim: `{{user.primary_email_address}}`
+- session token `name` claim: `{{user.first_name}} {{user.last_name}}`
+- session token `role` claim: `{{user.public_metadata.role}}`
+- allowed dev origin: `http://localhost:5173`
+
 Suggested local proof steps:
 
 1. In Clerk, add small custom session claims for email, display name, and admin role if needed.
@@ -274,6 +332,20 @@ Suggested local proof steps:
 3. In `frontend/.env`, set `VITE_CLERK_PUBLISHABLE_KEY` and sign in through the browser.
 4. Call `GET /api/me` through the app flow and confirm the local `users` row is inserted or updated in Postgres.
 5. Keep the Backend API profile fallback only for missing-claim edge cases.
+
+### Current local checkpoint
+
+As of May 12, 2026, the local auth proof is partway through:
+
+- the root `.env` has real Clerk dev values and `MOCK_AUTH_ENABLED=false`
+- the frontend has a Clerk publishable key and the browser can reach a signed-in Clerk state
+- the Go API starts successfully against Postgres with the real env configuration
+- the first protected-route proof is still pending: `/enter`, `/api/me`, local `users` upsert, and admin-route behavior have not been confirmed yet
+
+Two shell pitfalls showed up during local startup:
+
+- `DATABASE_URL` must stay on one line and should be quoted in zsh when passed inline because `?` is treated as a glob
+- sourcing `.env` in zsh requires shell-safe values; names with spaces such as `MOCK_AUTH_NAME` should be quoted
 
 ## Learning Notes
 

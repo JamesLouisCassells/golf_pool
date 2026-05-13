@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { Show, SignInButton, UserButton } from '@clerk/vue'
+import { Show, UserButton } from '@clerk/vue'
 
 import ClerkBridge from './components/ClerkBridge.vue'
 import { authMode, currentBackendUser, isClerkEnabled } from './lib/auth'
@@ -58,9 +58,7 @@ const authBanner = computed(() => {
           </div>
         </Show>
         <Show v-if="isClerkEnabled" when="signed-out">
-          <SignInButton>
-            <button class="ghost-button" type="button">Sign In</button>
-          </SignInButton>
+          <RouterLink to="/sign-in" class="nav-link nav-link-ghost">Sign In</RouterLink>
         </Show>
         <span v-if="!isClerkEnabled" class="badge badge-new">Mock auth compatible</span>
       </div>

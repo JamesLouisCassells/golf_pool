@@ -1,10 +1,16 @@
 <script setup>
 import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { SignIn } from '@clerk/vue'
 
 import { isClerkEnabled } from '../lib/auth'
 
+const route = useRoute()
 const isConfigured = computed(() => isClerkEnabled.value)
+const fallbackRedirectUrl = computed(() => {
+  const redirect = route.query.redirect_url
+  return typeof redirect === 'string' && redirect.trim() !== '' ? redirect : '/enter'
+})
 </script>
 
 <template>
@@ -39,7 +45,7 @@ const isConfigured = computed(() => isClerkEnabled.value)
     </div>
 
     <div v-else class="clerk-panel">
-      <SignIn />
+      <SignIn path="/sign-in" routing="path" :fallback-redirect-url="fallbackRedirectUrl" />
     </div>
   </section>
 </template>
