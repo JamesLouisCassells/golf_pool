@@ -10,6 +10,7 @@ import (
 
 	"github.com/JamesLouisCassells/golf_pool/backend/internal/auth"
 	"github.com/JamesLouisCassells/golf_pool/backend/internal/db"
+	"github.com/JamesLouisCassells/golf_pool/backend/internal/golf"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -20,10 +21,14 @@ type Store interface {
 	GetMyEntry(ctx context.Context, clerkID string) (db.Entry, error)
 	GetEntryByID(ctx context.Context, id string) (db.Entry, error)
 	ListEntriesForActiveYear(ctx context.Context) ([]db.Entry, error)
+	ListEntriesForYear(ctx context.Context, year int) ([]db.Entry, error)
 	CreateEntry(ctx context.Context, params db.CreateEntryParams) (db.Entry, error)
 	UpdateEntry(ctx context.Context, params db.UpdateEntryParams) (db.Entry, error)
 	DeleteEntry(ctx context.Context, id string) error
 	UpdateTournamentConfig(ctx context.Context, params db.UpdateTournamentConfigParams) (db.TournamentConfig, error)
+	ListGolferResults(ctx context.Context, year int) ([]db.GolferResult, error)
+	ReplaceGolferResults(ctx context.Context, year int, results []db.GolferResult) error
+	LockActiveEntries(ctx context.Context, lockedAt time.Time) (db.LockEntriesResult, error)
 }
 
 type Handler struct {
@@ -51,6 +56,19 @@ type updateTournamentConfigRequest struct {
 	Active            bool           `json:"active"`
 }
 
+type refreshResultsRequest struct {
+	Year    int                   `json:"year"`
+	Results []refreshResultRecord `json:"results"`
+}
+
+type refreshResultRecord struct {
+	GolferName string `json:"golfer_name"`
+	Position   string `json:"position"`
+	Score      string `json:"score"`
+	Today      string `json:"today"`
+	Thru       string `json:"thru"`
+}
+
 // NewRouter wires the HTTP surface for the API.
 // Keeping route setup in one place makes it easier to see what the server
 // exposes today and where new handlers should be added later.
@@ -61,6 +79,7 @@ func NewRouter(store Store, authMiddleware *auth.Middleware) http.Handler {
 	r.Get("/healthz", h.healthz)
 	r.Get("/api/config/{year}", h.getConfig)
 	r.Get("/api/entries", h.listEntries)
+	r.Get("/api/standings/{year}", h.getStandings)
 	r.With(authMiddleware.RequireAuth).Get("/api/me", h.me)
 	r.With(authMiddleware.RequireAuth).Get("/api/entries/mine", h.getMyEntry)
 	r.With(authMiddleware.RequireAuth).Post("/api/entries", h.createEntry)
@@ -70,6 +89,8 @@ func NewRouter(store Store, authMiddleware *auth.Middleware) http.Handler {
 	r.With(authMiddleware.RequireAdmin).Get("/api/admin/entries", h.listAdminEntries)
 	r.With(authMiddleware.RequireAdmin).Put("/api/admin/entries/{id}", h.updateAdminEntry)
 	r.With(authMiddleware.RequireAdmin).Delete("/api/admin/entries/{id}", h.deleteAdminEntry)
+	r.With(authMiddleware.RequireAdmin).Post("/api/admin/refresh", h.refreshAdminResults)
+	r.With(authMiddleware.RequireAdmin).Post("/api/admin/lock", h.lockAdminEntries)
 
 	return r
 }
@@ -180,6 +201,31 @@ func (h Handler) listEntries(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewEncoder(w).Encode(entries); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
+}
+
+func (h Handler) getStandings(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	year, err := strconv.Atoi(chi.URLParam(r, "year"))
+	if err != nil {
+		http.Error(w, "year must be a valid integer", http.StatusBadRequest)
+		return
+	}
+
+	standings, err := h.standingsForYear(r.Context(), year)
+	if err != nil {
+		if err == db.ErrNotFound {
+			http.Error(w, "config not found", http.StatusNotFound)
+			return
+		}
+
+		http.Error(w, "failed to load standings", http.StatusInternalServerError)
+		return
+	}
+
+	if err := json.NewEncoder(w).Encode(standings); err != nil {
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 	}
 }
@@ -497,6 +543,103 @@ func (h Handler) deleteAdminEntry(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h Handler) refreshAdminResults(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	var request refreshResultsRequest
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		http.Error(w, "request body must be valid json", http.StatusBadRequest)
+		return
+	}
+
+	year := request.Year
+	if year == 0 {
+		activeConfig, err := h.store.GetActiveConfig(r.Context())
+		if err != nil {
+			if err == db.ErrNotFound {
+				http.Error(w, "active tournament config not found", http.StatusNotFound)
+				return
+			}
+
+			http.Error(w, "failed to load active tournament config", http.StatusInternalServerError)
+			return
+		}
+
+		year = activeConfig.Year
+	}
+
+	results := make([]db.GolferResult, 0, len(request.Results))
+	for _, result := range request.Results {
+		golferName := strings.TrimSpace(result.GolferName)
+		position := strings.TrimSpace(result.Position)
+		if golferName == "" || position == "" {
+			http.Error(w, "each golfer result requires golfer_name and position", http.StatusBadRequest)
+			return
+		}
+
+		results = append(results, db.GolferResult{
+			Year:       year,
+			GolferName: golferName,
+			Position:   position,
+			Score:      strings.TrimSpace(result.Score),
+			Today:      strings.TrimSpace(result.Today),
+			Thru:       strings.TrimSpace(result.Thru),
+		})
+	}
+
+	if err := h.store.ReplaceGolferResults(r.Context(), year, results); err != nil {
+		http.Error(w, "failed to refresh golfer results", http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]any{
+		"year":         year,
+		"result_count": len(results),
+	}
+
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
+}
+
+func (h Handler) lockAdminEntries(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	result, err := h.store.LockActiveEntries(r.Context(), time.Now().UTC())
+	if err != nil {
+		if err == db.ErrNotFound {
+			http.Error(w, "active tournament config not found", http.StatusNotFound)
+			return
+		}
+
+		http.Error(w, "failed to lock active entries", http.StatusInternalServerError)
+		return
+	}
+
+	if err := json.NewEncoder(w).Encode(result); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
+}
+
+func (h Handler) standingsForYear(ctx context.Context, year int) (golf.Standings, error) {
+	cfg, err := h.store.GetConfig(ctx, year)
+	if err != nil {
+		return golf.Standings{}, err
+	}
+
+	entries, err := h.store.ListEntriesForYear(ctx, year)
+	if err != nil {
+		return golf.Standings{}, err
+	}
+
+	results, err := h.store.ListGolferResults(ctx, year)
+	if err != nil {
+		return golf.Standings{}, err
+	}
+
+	return golf.BuildStandings(cfg, entries, results)
 }
 
 func deadlinePassed(deadline *time.Time, now time.Time) bool {

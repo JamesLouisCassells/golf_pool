@@ -14,15 +14,19 @@ import (
 )
 
 type stubStore struct {
-	getConfigFn       func(ctx context.Context, year int) (db.TournamentConfig, error)
-	getActiveConfigFn func(ctx context.Context) (db.TournamentConfig, error)
-	getMyEntryFn      func(ctx context.Context, clerkID string) (db.Entry, error)
-	getEntryByIDFn    func(ctx context.Context, id string) (db.Entry, error)
-	listEntriesFn     func(ctx context.Context) ([]db.Entry, error)
-	createEntryFn     func(ctx context.Context, params db.CreateEntryParams) (db.Entry, error)
-	updateEntryFn     func(ctx context.Context, params db.UpdateEntryParams) (db.Entry, error)
-	deleteEntryFn     func(ctx context.Context, id string) error
-	updateConfigFn    func(ctx context.Context, params db.UpdateTournamentConfigParams) (db.TournamentConfig, error)
+	getConfigFn            func(ctx context.Context, year int) (db.TournamentConfig, error)
+	getActiveConfigFn      func(ctx context.Context) (db.TournamentConfig, error)
+	getMyEntryFn           func(ctx context.Context, clerkID string) (db.Entry, error)
+	getEntryByIDFn         func(ctx context.Context, id string) (db.Entry, error)
+	listEntriesFn          func(ctx context.Context) ([]db.Entry, error)
+	listEntriesForYearFn   func(ctx context.Context, year int) ([]db.Entry, error)
+	createEntryFn          func(ctx context.Context, params db.CreateEntryParams) (db.Entry, error)
+	updateEntryFn          func(ctx context.Context, params db.UpdateEntryParams) (db.Entry, error)
+	deleteEntryFn          func(ctx context.Context, id string) error
+	updateConfigFn         func(ctx context.Context, params db.UpdateTournamentConfigParams) (db.TournamentConfig, error)
+	listGolferResultsFn    func(ctx context.Context, year int) ([]db.GolferResult, error)
+	replaceGolferResultsFn func(ctx context.Context, year int, results []db.GolferResult) error
+	lockActiveEntriesFn    func(ctx context.Context, lockedAt time.Time) (db.LockEntriesResult, error)
 }
 
 func (s stubStore) GetConfig(ctx context.Context, year int) (db.TournamentConfig, error) {
@@ -65,6 +69,14 @@ func (s stubStore) ListEntriesForActiveYear(ctx context.Context) ([]db.Entry, er
 	return s.listEntriesFn(ctx)
 }
 
+func (s stubStore) ListEntriesForYear(ctx context.Context, year int) ([]db.Entry, error) {
+	if s.listEntriesForYearFn == nil {
+		return nil, errors.New("unexpected ListEntriesForYear call")
+	}
+
+	return s.listEntriesForYearFn(ctx, year)
+}
+
 func (s stubStore) CreateEntry(ctx context.Context, params db.CreateEntryParams) (db.Entry, error) {
 	if s.createEntryFn == nil {
 		return db.Entry{}, errors.New("unexpected CreateEntry call")
@@ -95,6 +107,30 @@ func (s stubStore) UpdateTournamentConfig(ctx context.Context, params db.UpdateT
 	}
 
 	return s.updateConfigFn(ctx, params)
+}
+
+func (s stubStore) ListGolferResults(ctx context.Context, year int) ([]db.GolferResult, error) {
+	if s.listGolferResultsFn == nil {
+		return nil, errors.New("unexpected ListGolferResults call")
+	}
+
+	return s.listGolferResultsFn(ctx, year)
+}
+
+func (s stubStore) ReplaceGolferResults(ctx context.Context, year int, results []db.GolferResult) error {
+	if s.replaceGolferResultsFn == nil {
+		return errors.New("unexpected ReplaceGolferResults call")
+	}
+
+	return s.replaceGolferResultsFn(ctx, year, results)
+}
+
+func (s stubStore) LockActiveEntries(ctx context.Context, lockedAt time.Time) (db.LockEntriesResult, error) {
+	if s.lockActiveEntriesFn == nil {
+		return db.LockEntriesResult{}, errors.New("unexpected LockActiveEntries call")
+	}
+
+	return s.lockActiveEntriesFn(ctx, lockedAt)
 }
 
 func TestProtectedMeRouteRequiresBearerToken(t *testing.T) {
@@ -484,6 +520,111 @@ func TestGetMyEntryReturnsNotFoundWhenNoActiveEntryExists(t *testing.T) {
 
 	if recorder.Code != http.StatusNotFound {
 		t.Fatalf("expected status %d, got %d", http.StatusNotFound, recorder.Code)
+	}
+}
+
+func TestStandingsRouteReturnsProjectedTotals(t *testing.T) {
+	t.Parallel()
+
+	frlWinner := "Scottie Scheffler"
+	store := stubStore{
+		getConfigFn: func(ctx context.Context, year int) (db.TournamentConfig, error) {
+			return db.TournamentConfig{
+				Year:        year,
+				PoolPayouts: map[string]any{"1": 1000, "2": 600},
+				FRLWinner:   &frlWinner,
+				FRLPayout:   500000,
+			}, nil
+		},
+		listEntriesForYearFn: func(ctx context.Context, year int) ([]db.Entry, error) {
+			return []db.Entry{
+				{
+					ID:          "entry-1",
+					DisplayName: "James",
+					Picks:       map[string]any{"Group 1": "Scottie Scheffler"},
+				},
+			}, nil
+		},
+		listGolferResultsFn: func(ctx context.Context, year int) ([]db.GolferResult, error) {
+			return []db.GolferResult{
+				{Year: year, GolferName: "Scottie Scheffler", Position: "1"},
+			}, nil
+		},
+	}
+
+	router := NewRouter(store, auth.NewMiddleware(nil, auth.Config{}))
+	req := httptest.NewRequest(http.MethodGet, "/api/standings/2026", nil)
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+	}
+}
+
+func TestAdminRefreshSucceedsForAdmin(t *testing.T) {
+	t.Parallel()
+
+	store := stubStore{
+		replaceGolferResultsFn: func(ctx context.Context, year int, results []db.GolferResult) error {
+			if year != 2026 {
+				t.Fatalf("expected year 2026, got %d", year)
+			}
+			if len(results) != 1 {
+				t.Fatalf("expected 1 golfer result, got %d", len(results))
+			}
+			if results[0].GolferName != "Scottie Scheffler" {
+				t.Fatalf("expected golfer Scottie Scheffler, got %s", results[0].GolferName)
+			}
+			return nil
+		},
+	}
+
+	router := NewRouter(store, auth.NewMiddleware(nil, auth.Config{
+		MockEnabled: true,
+		MockClerkID: "admin-user",
+		MockEmail:   "admin@example.com",
+		MockAdmin:   true,
+	}))
+
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/refresh", bytes.NewBufferString(`{"year":2026,"results":[{"golfer_name":"Scottie Scheffler","position":"1","score":"-12","today":"-4","thru":"F"}]}`))
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+	}
+}
+
+func TestAdminLockReturnsSuccessForAdmin(t *testing.T) {
+	t.Parallel()
+
+	store := stubStore{
+		lockActiveEntriesFn: func(ctx context.Context, lockedAt time.Time) (db.LockEntriesResult, error) {
+			return db.LockEntriesResult{
+				Year:          2026,
+				EntryDeadline: lockedAt,
+				LockedEntries: 4,
+			}, nil
+		},
+	}
+
+	router := NewRouter(store, auth.NewMiddleware(nil, auth.Config{
+		MockEnabled: true,
+		MockClerkID: "admin-user",
+		MockEmail:   "admin@example.com",
+		MockAdmin:   true,
+	}))
+
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/lock", nil)
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
 	}
 }
 
