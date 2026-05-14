@@ -83,3 +83,41 @@ func TestBuildStandingsAppliesTieSplitsMultipliersAndFRLBonus(t *testing.T) {
 		t.Fatalf("expected Bravo total payout 800, got %d", bravo.TotalPayout)
 	}
 }
+
+func TestBuildStandingsMatchesShortPickNamesToFullLeaderboardNames(t *testing.T) {
+	t.Parallel()
+
+	cfg := db.TournamentConfig{
+		Year:        2026,
+		PoolPayouts: map[string]any{"1": 1000, "2": 600, "3": 400},
+	}
+
+	results := []db.GolferResult{
+		{Year: 2026, GolferName: "Scottie Scheffler", Position: "1"},
+		{Year: 2026, GolferName: "Justin Rose", Position: "2"},
+	}
+
+	entries := []db.Entry{
+		{
+			ID:          "entry-1",
+			DisplayName: "Short Names",
+			Picks: map[string]any{
+				"Group 1": "Scheffler",
+				"WC":      "Rose",
+			},
+		},
+	}
+
+	standings, err := BuildStandings(cfg, entries, results)
+	if err != nil {
+		t.Fatalf("BuildStandings returned error: %v", err)
+	}
+
+	if len(standings.Entries) != 1 {
+		t.Fatalf("expected 1 standings entry, got %d", len(standings.Entries))
+	}
+
+	if standings.Entries[0].TotalPayout != 1600 {
+		t.Fatalf("expected short-name picks to total 1600, got %d", standings.Entries[0].TotalPayout)
+	}
+}

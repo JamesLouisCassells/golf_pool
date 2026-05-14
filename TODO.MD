@@ -98,13 +98,13 @@ Current priority before more feature work:
 ### Golf scores + payout calculation
 - [ ] Port RapidAPI polling logic from Node.js to Go (`golf/` package)
 - [x] Port payout calculation and tie distribution logic to Go
-- [ ] Port golfer name matching logic to Go
+- [x] Port golfer name matching logic to Go
 - [ ] Implement poll interval logic (active tournament hours vs. off-season)
 - [x] Apply mutt/old-mutt multipliers and FRL payout from `tournament_config`
 - [x] `GET /api/standings/:year` — return entries sorted by total payout with per-group breakdown
 
 ### Standings page
-- [ ] `Standings.vue`: fetch standings, auto-refresh every 5 minutes
+- [x] `Standings.vue`: fetch standings, auto-refresh every 5 minutes
 - [ ] Port `EntryCard` from existing JS into `EntryCard.vue` — expand/collapse, golfer scores, payout per group
 - [ ] Port side leaderboard into `SideLeaderboard.vue`
 - [ ] `Countdown.vue`: show countdown when tournament hasn't started

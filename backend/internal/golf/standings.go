@@ -49,6 +49,7 @@ func BuildStandings(cfg db.TournamentConfig, entries []db.Entry, results []db.Go
 
 	projectedByGolfer := projectedPayouts(results, payouts)
 	resultByGolfer := make(map[string]db.GolferResult, len(results))
+	nameAliases := buildNameAliases(results)
 
 	var updatedAt *time.Time
 	for _, result := range results {
@@ -76,12 +77,13 @@ func BuildStandings(cfg db.TournamentConfig, entries []db.Entry, results []db.Go
 		hasFRLWinner := false
 
 		for _, pick := range picks {
-			result, found := resultByGolfer[normalizeName(pick.GolferName)]
-			basePayout := projectedByGolfer[normalizeName(pick.GolferName)]
+			key := resolveGolferKey(pick.GolferName, nameAliases)
+			result, found := resultByGolfer[key]
+			basePayout := projectedByGolfer[key]
 			multiplier := payoutMultiplier(pick.GroupName)
 			totalPayout := basePayout * multiplier
 
-			if frlWinnerKey != "" && normalizeName(pick.GolferName) == frlWinnerKey {
+			if frlWinnerKey != "" && key == resolveGolferKey(stringValue(cfg.FRLWinner), nameAliases) {
 				hasFRLWinner = true
 			}
 
@@ -112,7 +114,7 @@ func BuildStandings(cfg db.TournamentConfig, entries []db.Entry, results []db.Go
 
 		if frlWinnerKey != "" && !hasFRLWinner {
 			for _, golferName := range pickedGolfers {
-				if normalizeName(golferName) == frlWinnerKey {
+				if resolveGolferKey(golferName, nameAliases) == resolveGolferKey(stringValue(cfg.FRLWinner), nameAliases) {
 					entryFRLBonus = frlBonus
 					total += entryFRLBonus
 					break
@@ -327,6 +329,64 @@ func normalizeName(value string) string {
 	}
 
 	return builder.String()
+}
+
+func resolveGolferKey(value string, aliases map[string]string) string {
+	normalized := normalizeName(value)
+	if resolved, ok := aliases[normalized]; ok {
+		return resolved
+	}
+
+	return normalized
+}
+
+func buildNameAliases(results []db.GolferResult) map[string]string {
+	aliases := make(map[string]string, len(results)*3)
+	lastNameCounts := make(map[string]int)
+
+	for _, result := range results {
+		parts := splitNameParts(result.GolferName)
+		if len(parts) == 0 {
+			continue
+		}
+
+		lastName := normalizeName(parts[len(parts)-1])
+		if lastName != "" {
+			lastNameCounts[lastName]++
+		}
+	}
+
+	for _, result := range results {
+		fullKey := normalizeName(result.GolferName)
+		if fullKey == "" {
+			continue
+		}
+
+		aliases[fullKey] = fullKey
+
+		parts := splitNameParts(result.GolferName)
+		if len(parts) == 0 {
+			continue
+		}
+
+		lastName := normalizeName(parts[len(parts)-1])
+		if lastName != "" && lastNameCounts[lastName] == 1 {
+			aliases[lastName] = fullKey
+		}
+
+		if len(parts) >= 2 {
+			firstInitialLast := normalizeName(string(parts[0][0]) + parts[len(parts)-1])
+			if firstInitialLast != "" {
+				aliases[firstInitialLast] = fullKey
+			}
+		}
+	}
+
+	return aliases
+}
+
+func splitNameParts(value string) []string {
+	return strings.Fields(strings.TrimSpace(value))
 }
 
 func stringValue(value *string) string {

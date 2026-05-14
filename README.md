@@ -16,8 +16,9 @@ The repository currently has:
 - mock auth for local development and Clerk JWT validation for backend-protected routes
 - entry create/edit/read flows and a public entries listing once the tournament starts
 - an admin config form backed by admin-only config endpoints
+- a live standings endpoint plus a first pass standings page backed by stored golfer result snapshots
 
-This is no longer just scaffold state, but it is still incomplete. Live standings, frontend Clerk integration, and deployment are still pending.
+This is no longer just scaffold state, but it is still incomplete. Real provider ingestion for live standings, final Clerk proof cleanup, and deployment are still pending.
 
 ## Repository Structure
 
@@ -194,7 +195,7 @@ What the current frontend does:
 
 What is still missing:
 
-- live standings integration
+- live golf provider ingestion for standings
 - final end-to-end proof against a real Clerk instance
 - polish around loading, error, and mobile states
 
