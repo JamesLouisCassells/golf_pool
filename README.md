@@ -216,6 +216,13 @@ To enable the provider-backed path, add these backend env values:
 
 With those set, the admin page can call `/api/admin/refresh` using a tournament ID and optional round ID instead of requiring pasted results JSON every time.
 
+If you are on a low-request RapidAPI tier, do not treat provider refresh like a live dev polling loop. The intended low-cost workflow is:
+
+- fetch one real snapshot from the provider
+- store it in `golfer_results`
+- do most UI and standings work against that stored snapshot
+- only fetch again when you actually need fresher tournament data
+
 ## Current Auth Slice
 
 The protected backend surface currently includes:

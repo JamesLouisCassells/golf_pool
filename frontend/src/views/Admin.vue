@@ -525,7 +525,7 @@ function prettyJSON(value) {
 
       <div class="form-footer">
         <p class="helper-copy">
-          You can either fetch a live snapshot from the configured golf provider using tournament IDs, or paste a manual results array and store that directly.
+          You can either fetch a live snapshot from the configured golf provider using tournament IDs, or paste a manual results array and store that directly. Given the free-tier limits, the safer workflow is usually: fetch once, store the snapshot, then do most testing against the saved standings data instead of refetching.
         </p>
         <div class="entry-actions">
           <button class="ghost-button" type="button" :disabled="operationsLoading" @click="fetchProviderResults">
