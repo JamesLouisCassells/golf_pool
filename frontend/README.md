@@ -37,7 +37,7 @@ MOCK_AUTH_ENABLED=false
 CLERK_SECRET_KEY=sk_test_replace_me
 CLERK_JWKS_URL=https://your-clerk-domain/.well-known/jwks.json
 CLERK_ISSUER=https://your-clerk-domain
-CLERK_AUTHORIZED_PARTIES=http://localhost:5173
+CLERK_AUTHORIZED_PARTIES=http://localhost:5173,http://127.0.0.1:5173
 ```
 
 The recommended Clerk session token claims for this app are:

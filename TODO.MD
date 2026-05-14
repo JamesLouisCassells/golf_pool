@@ -56,7 +56,7 @@ Current priority before more feature work:
 - [x] Add DB connection pool to Go (`pgxpool`), log success on startup
 - [x] Add typed config and user queries in `db/` (`GetConfig`, `GetUser`, `UpsertUser`)
 - [x] Add typed entry lifecycle and listing queries (`CreateEntry`, entry lookup/update, active-year list)
-- [ ] Add remaining typed query functions (`standings reads`, future admin lock/refresh operations)
+- [x] Add remaining typed query functions (`standings reads`, future admin lock/refresh operations)
 
 ### Clerk auth
 - [x] Create Clerk account, set up application, enable Google + email/password providers
@@ -97,14 +97,14 @@ Current priority before more feature work:
 
 ### Golf scores + payout calculation
 - [ ] Port RapidAPI polling logic from Node.js to Go (`golf/` package)
-- [ ] Port payout calculation and tie distribution logic to Go
-- [ ] Port golfer name matching logic to Go
+- [x] Port payout calculation and tie distribution logic to Go
+- [x] Port golfer name matching logic to Go
 - [ ] Implement poll interval logic (active tournament hours vs. off-season)
-- [ ] Apply mutt/old-mutt multipliers and FRL payout from `tournament_config`
-- [ ] `GET /api/standings/:year` — return entries sorted by total payout with per-group breakdown
+- [x] Apply mutt/old-mutt multipliers and FRL payout from `tournament_config`
+- [x] `GET /api/standings/:year` — return entries sorted by total payout with per-group breakdown
 
 ### Standings page
-- [ ] `Standings.vue`: fetch standings, auto-refresh every 5 minutes
+- [x] `Standings.vue`: fetch standings, auto-refresh every 5 minutes
 - [ ] Port `EntryCard` from existing JS into `EntryCard.vue` — expand/collapse, golfer scores, payout per group
 - [ ] Port side leaderboard into `SideLeaderboard.vue`
 - [ ] `Countdown.vue`: show countdown when tournament hasn't started
@@ -119,8 +119,8 @@ Current priority before more feature work:
 - [x] `GET /api/admin/entries` — list all entries for the active year
 - [x] `PUT /api/admin/entries/:id` — edit any entry (admin override)
 - [x] `DELETE /api/admin/entries/:id` — delete entry
-- [ ] `POST /api/admin/lock` — lock all entries (sets deadline to now)
-- [ ] `POST /api/admin/refresh` — manually trigger a score data refresh
+- [x] `POST /api/admin/lock` — lock all entries (sets deadline to now)
+- [x] `POST /api/admin/refresh` — manually trigger a score data refresh
 - [ ] `Admin.vue`: entry table with edit/delete actions, refresh + lock buttons
 - [x] `Admin.vue`: config form for tournament settings
 - [x] Guard `/admin` route in Vue Router — redirect non-admins to home

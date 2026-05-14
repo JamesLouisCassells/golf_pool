@@ -361,6 +361,46 @@ p {
   align-items: flex-start;
 }
 
+.standings-card-total {
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+}
+
+.standings-card-total p {
+  font-family: var(--serif);
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.standings-frl {
+  margin-bottom: 0;
+}
+
+.standings-pick-list div {
+  grid-template-columns: 1.1fr 0.9fr;
+}
+
+.standings-pick-list dt,
+.standings-pick-list dd {
+  display: grid;
+  gap: 6px;
+}
+
+.standings-pick-list strong {
+  font-size: 1rem;
+  color: var(--ink);
+}
+
+.standings-pick-list dd {
+  justify-items: end;
+  text-align: right;
+}
+
+.standings-refresh-meta {
+  margin-top: 18px;
+}
+
 .pick-list {
   display: grid;
   gap: 10px;

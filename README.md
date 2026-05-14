@@ -16,8 +16,9 @@ The repository currently has:
 - mock auth for local development and Clerk JWT validation for backend-protected routes
 - entry create/edit/read flows and a public entries listing once the tournament starts
 - an admin config form backed by admin-only config endpoints
+- a live standings endpoint plus a first pass standings page backed by stored golfer result snapshots
 
-This is no longer just scaffold state, but it is still incomplete. Live standings, frontend Clerk integration, and deployment are still pending.
+This is no longer just scaffold state, but it is still incomplete. Real provider ingestion for live standings, final Clerk proof cleanup, and deployment are still pending.
 
 ## Repository Structure
 
@@ -93,7 +94,7 @@ To run the real browser auth flow locally:
    - `CLERK_SECRET_KEY=...`
    - `CLERK_JWKS_URL=https://<your-clerk-domain>/.well-known/jwks.json`
    - `CLERK_ISSUER=https://<your-clerk-domain>`
-   - `CLERK_AUTHORIZED_PARTIES=http://localhost:5173`
+   - `CLERK_AUTHORIZED_PARTIES=http://localhost:5173,http://127.0.0.1:5173`
 2. In `frontend/.env`, set:
    - `VITE_CLERK_PUBLISHABLE_KEY=...`
 3. In the Clerk dashboard, customize the session token so the backend can read the fields it expects without calling Clerk on every request.
@@ -194,7 +195,7 @@ What the current frontend does:
 
 What is still missing:
 
-- live standings integration
+- live golf provider ingestion for standings
 - final end-to-end proof against a real Clerk instance
 - polish around loading, error, and mobile states
 
