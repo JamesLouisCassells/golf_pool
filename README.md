@@ -69,6 +69,7 @@ The backend currently expects:
 - `HTTP_ADDR`
 - `DATABASE_URL`
 - either mock-auth env vars or Clerk env vars for protected API routes
+- optional golf provider env vars if you want `/api/admin/refresh` to fetch a live leaderboard instead of only accepting pasted JSON
 
 Mock auth and Clerk-related values are included in `.env.example`. Mock auth is still the temporary local-development path while the real Clerk browser flow is being wired.
 
@@ -195,9 +196,25 @@ What the current frontend does:
 
 What is still missing:
 
-- live golf provider ingestion for standings
+- automatic live golf provider ingestion / polling for standings
 - final end-to-end proof against a real Clerk instance
 - polish around loading, error, and mobile states
+
+### Golf Provider Refresh Setup
+
+The app can now store golfer result snapshots two ways:
+
+- paste manual results JSON into the admin page
+- fetch a snapshot from a configured provider through the admin refresh route
+
+To enable the provider-backed path, add these backend env values:
+
+- `GOLF_PROVIDER=slashgolf`
+- `GOLF_API_BASE_URL=https://live-golf-data.p.rapidapi.com`
+- `GOLF_API_KEY=...`
+- `GOLF_API_HOST=live-golf-data.p.rapidapi.com`
+
+With those set, the admin page can call `/api/admin/refresh` using a tournament ID and optional round ID instead of requiring pasted results JSON every time.
 
 ## Current Auth Slice
 

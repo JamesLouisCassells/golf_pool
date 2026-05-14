@@ -37,6 +37,8 @@ const form = reactive({
 
 const operationsForm = reactive({
   refresh_year: activeYear,
+  tournament_id: '',
+  round_id: '',
   results_json:
     '[\n' +
     '  {\n' +
@@ -193,6 +195,55 @@ async function refreshResults() {
     operationsSuccessMessage.value = `Stored ${payload.result_count} golfer results for ${payload.year}.`
   } catch (error) {
     operationsErrorMessage.value = error instanceof Error ? error.message : 'Something went wrong while refreshing golfer results.'
+  } finally {
+    operationsLoading.value = false
+  }
+}
+
+async function fetchProviderResults() {
+  if (operationsLoading.value) {
+    return
+  }
+
+  operationsErrorMessage.value = ''
+  operationsSuccessMessage.value = ''
+
+  const tournamentID = Number(operationsForm.tournament_id)
+  if (!Number.isInteger(tournamentID) || tournamentID <= 0) {
+    operationsErrorMessage.value = 'Tournament ID is required to fetch standings from the provider.'
+    return
+  }
+
+  const roundIDValue = String(operationsForm.round_id).trim()
+  const roundID = roundIDValue === '' ? null : Number(roundIDValue)
+  if (roundIDValue !== '' && (!Number.isInteger(roundID) || roundID <= 0)) {
+    operationsErrorMessage.value = 'Round ID must be a positive number when provided.'
+    return
+  }
+
+  operationsLoading.value = true
+
+  try {
+    const response = await apiFetch('/api/admin/refresh', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        year: Number(operationsForm.refresh_year),
+        tournament_id: tournamentID,
+        round_id: roundID,
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error(await responseMessage(response, 'Failed to fetch golfer results from the provider.'))
+    }
+
+    const payload = await response.json()
+    operationsSuccessMessage.value = `Fetched ${payload.result_count} golfer results for ${payload.year} from the provider.`
+  } catch (error) {
+    operationsErrorMessage.value = error instanceof Error ? error.message : 'Something went wrong while fetching provider results.'
   } finally {
     operationsLoading.value = false
   }
@@ -425,6 +476,32 @@ function prettyJSON(value) {
           <input v-model="operationsForm.refresh_year" :disabled="operationsLoading" type="number" min="2024" step="1" />
         </label>
 
+        <label class="field">
+          <span>Provider tournament ID</span>
+          <input
+            v-model="operationsForm.tournament_id"
+            :disabled="operationsLoading"
+            type="number"
+            min="1"
+            step="1"
+            placeholder="Required for provider fetches"
+          />
+        </label>
+      </div>
+
+      <div class="field-grid">
+        <label class="field">
+          <span>Provider round ID</span>
+          <input
+            v-model="operationsForm.round_id"
+            :disabled="operationsLoading"
+            type="number"
+            min="1"
+            step="1"
+            placeholder="Optional"
+          />
+        </label>
+
         <div class="field admin-ops-card">
           <span>Entry lock</span>
           <p class="helper-copy">
@@ -448,12 +525,16 @@ function prettyJSON(value) {
 
       <div class="form-footer">
         <p class="helper-copy">
-          This is the manual standings snapshot path for now. Paste a results array, store it, then the public standings page will read the updated totals.
+          You can either fetch a live snapshot from the configured golf provider using tournament IDs, or paste a manual results array and store that directly.
         </p>
-
-        <button class="submit-button" type="button" :disabled="operationsLoading" @click="refreshResults">
-          {{ operationsLoading ? 'Saving Snapshot...' : 'Refresh Standings Snapshot' }}
-        </button>
+        <div class="entry-actions">
+          <button class="ghost-button" type="button" :disabled="operationsLoading" @click="fetchProviderResults">
+            {{ operationsLoading ? 'Working...' : 'Fetch Provider Snapshot' }}
+          </button>
+          <button class="submit-button" type="button" :disabled="operationsLoading" @click="refreshResults">
+            {{ operationsLoading ? 'Saving Snapshot...' : 'Save Manual Snapshot' }}
+          </button>
+        </div>
       </div>
     </div>
   </section>

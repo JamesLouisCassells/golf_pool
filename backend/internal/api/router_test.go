@@ -11,6 +11,7 @@ import (
 
 	"github.com/JamesLouisCassells/golf_pool/backend/internal/auth"
 	"github.com/JamesLouisCassells/golf_pool/backend/internal/db"
+	"github.com/JamesLouisCassells/golf_pool/backend/internal/golf"
 )
 
 type stubStore struct {
@@ -27,6 +28,10 @@ type stubStore struct {
 	listGolferResultsFn    func(ctx context.Context, year int) ([]db.GolferResult, error)
 	replaceGolferResultsFn func(ctx context.Context, year int, results []db.GolferResult) error
 	lockActiveEntriesFn    func(ctx context.Context, lockedAt time.Time) (db.LockEntriesResult, error)
+}
+
+type stubProvider struct {
+	fetchLeaderboardFn func(ctx context.Context, request golf.FetchRequest) ([]db.GolferResult, error)
 }
 
 func (s stubStore) GetConfig(ctx context.Context, year int) (db.TournamentConfig, error) {
@@ -133,10 +138,18 @@ func (s stubStore) LockActiveEntries(ctx context.Context, lockedAt time.Time) (d
 	return s.lockActiveEntriesFn(ctx, lockedAt)
 }
 
+func (s stubProvider) FetchLeaderboard(ctx context.Context, request golf.FetchRequest) ([]db.GolferResult, error) {
+	if s.fetchLeaderboardFn == nil {
+		return nil, errors.New("unexpected FetchLeaderboard call")
+	}
+
+	return s.fetchLeaderboardFn(ctx, request)
+}
+
 func TestProtectedMeRouteRequiresBearerToken(t *testing.T) {
 	t.Parallel()
 
-	router := NewRouter(nil, auth.NewMiddleware(nil, auth.Config{}))
+	router := NewRouter(nil, auth.NewMiddleware(nil, auth.Config{}), nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/me", nil)
 	recorder := httptest.NewRecorder()
@@ -151,7 +164,7 @@ func TestProtectedMeRouteRequiresBearerToken(t *testing.T) {
 func TestProtectedMyEntryRouteRequiresBearerToken(t *testing.T) {
 	t.Parallel()
 
-	router := NewRouter(nil, auth.NewMiddleware(nil, auth.Config{}))
+	router := NewRouter(nil, auth.NewMiddleware(nil, auth.Config{}), nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/entries/mine", nil)
 	recorder := httptest.NewRecorder()
@@ -166,7 +179,7 @@ func TestProtectedMyEntryRouteRequiresBearerToken(t *testing.T) {
 func TestProtectedCreateEntryRouteRequiresBearerToken(t *testing.T) {
 	t.Parallel()
 
-	router := NewRouter(nil, auth.NewMiddleware(nil, auth.Config{}))
+	router := NewRouter(nil, auth.NewMiddleware(nil, auth.Config{}), nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/entries", bytes.NewBufferString(`{}`))
 	recorder := httptest.NewRecorder()
@@ -181,7 +194,7 @@ func TestProtectedCreateEntryRouteRequiresBearerToken(t *testing.T) {
 func TestProtectedUpdateEntryRouteRequiresBearerToken(t *testing.T) {
 	t.Parallel()
 
-	router := NewRouter(nil, auth.NewMiddleware(nil, auth.Config{}))
+	router := NewRouter(nil, auth.NewMiddleware(nil, auth.Config{}), nil)
 
 	req := httptest.NewRequest(http.MethodPut, "/api/entries/entry-1", bytes.NewBufferString(`{}`))
 	recorder := httptest.NewRecorder()
@@ -201,7 +214,7 @@ func TestAdminConfigRouteReturnsForbiddenForNonAdmin(t *testing.T) {
 		MockClerkID: "dev-user",
 		MockEmail:   "dev@example.com",
 		MockAdmin:   false,
-	}))
+	}), nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/admin/config/2026", nil)
 	recorder := httptest.NewRecorder()
@@ -227,7 +240,7 @@ func TestAdminConfigRouteReturnsConfigForAdmin(t *testing.T) {
 		MockClerkID: "admin-user",
 		MockEmail:   "admin@example.com",
 		MockAdmin:   true,
-	}))
+	}), nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/admin/config/2026", nil)
 	recorder := httptest.NewRecorder()
@@ -272,7 +285,7 @@ func TestAdminConfigUpdateSucceedsForAdmin(t *testing.T) {
 		MockClerkID: "admin-user",
 		MockEmail:   "admin@example.com",
 		MockAdmin:   true,
-	}))
+	}), nil)
 
 	reqBody := `{"entry_deadline":"` + now.Format(time.RFC3339) + `","start_date":"` + now.Format(time.RFC3339) + `","end_date":"` + now.Format(time.RFC3339) + `","groups":{"Group 1":["Scheffler"]},"mutt_multiplier":"2.5","old_mutt_multiplier":"3.5","pool_payouts":{"1":4475},"frl_winner":"Rose","frl_payout":500000,"active":true}`
 	req := httptest.NewRequest(http.MethodPut, "/api/admin/config/2026", bytes.NewBufferString(reqBody))
@@ -293,7 +306,7 @@ func TestAdminEntriesRouteReturnsForbiddenForNonAdmin(t *testing.T) {
 		MockClerkID: "dev-user",
 		MockEmail:   "dev@example.com",
 		MockAdmin:   false,
-	}))
+	}), nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/admin/entries", nil)
 	recorder := httptest.NewRecorder()
@@ -321,7 +334,7 @@ func TestAdminEntriesRouteReturnsEntriesForAdmin(t *testing.T) {
 		MockClerkID: "admin-user",
 		MockEmail:   "admin@example.com",
 		MockAdmin:   true,
-	}))
+	}), nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/admin/entries", nil)
 	recorder := httptest.NewRecorder()
@@ -368,7 +381,7 @@ func TestAdminEntryUpdateSucceedsForAdmin(t *testing.T) {
 		MockClerkID: "admin-user",
 		MockEmail:   "admin@example.com",
 		MockAdmin:   true,
-	}))
+	}), nil)
 
 	req := httptest.NewRequest(http.MethodPut, "/api/admin/entries/entry-1", bytes.NewBufferString(`{"display_name":"James","picks":{"Group 1":"Scheffler"},"in_overs":true}`))
 	recorder := httptest.NewRecorder()
@@ -398,7 +411,7 @@ func TestAdminEntryDeleteReturnsNoContentForAdmin(t *testing.T) {
 		MockClerkID: "admin-user",
 		MockEmail:   "admin@example.com",
 		MockAdmin:   true,
-	}))
+	}), nil)
 
 	req := httptest.NewRequest(http.MethodDelete, "/api/admin/entries/entry-1", nil)
 	recorder := httptest.NewRecorder()
@@ -420,7 +433,7 @@ func TestListEntriesReturnsForbiddenBeforeTournamentStarts(t *testing.T) {
 		},
 	}
 
-	router := NewRouter(store, auth.NewMiddleware(nil, auth.Config{}))
+	router := NewRouter(store, auth.NewMiddleware(nil, auth.Config{}), nil)
 	req := httptest.NewRequest(http.MethodGet, "/api/entries", nil)
 	recorder := httptest.NewRecorder()
 
@@ -453,7 +466,7 @@ func TestListEntriesReturnsEntriesAfterTournamentStarts(t *testing.T) {
 		},
 	}
 
-	router := NewRouter(store, auth.NewMiddleware(nil, auth.Config{}))
+	router := NewRouter(store, auth.NewMiddleware(nil, auth.Config{}), nil)
 	req := httptest.NewRequest(http.MethodGet, "/api/entries", nil)
 	recorder := httptest.NewRecorder()
 
@@ -552,7 +565,7 @@ func TestStandingsRouteReturnsProjectedTotals(t *testing.T) {
 		},
 	}
 
-	router := NewRouter(store, auth.NewMiddleware(nil, auth.Config{}))
+	router := NewRouter(store, auth.NewMiddleware(nil, auth.Config{}), nil)
 	req := httptest.NewRequest(http.MethodGet, "/api/standings/2026", nil)
 	recorder := httptest.NewRecorder()
 
@@ -586,7 +599,7 @@ func TestAdminRefreshSucceedsForAdmin(t *testing.T) {
 		MockClerkID: "admin-user",
 		MockEmail:   "admin@example.com",
 		MockAdmin:   true,
-	}))
+	}), nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/admin/refresh", bytes.NewBufferString(`{"year":2026,"results":[{"golfer_name":"Scottie Scheffler","position":"1","score":"-12","today":"-4","thru":"F"}]}`))
 	recorder := httptest.NewRecorder()
@@ -616,7 +629,7 @@ func TestAdminLockReturnsSuccessForAdmin(t *testing.T) {
 		MockClerkID: "admin-user",
 		MockEmail:   "admin@example.com",
 		MockAdmin:   true,
-	}))
+	}), nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/admin/lock", nil)
 	recorder := httptest.NewRecorder()
@@ -763,7 +776,7 @@ func TestUpdateEntryReturnsNotFoundWhenEntryDoesNotExist(t *testing.T) {
 		MockEnabled: true,
 		MockClerkID: "clerk_123",
 		MockEmail:   "james@example.com",
-	}))
+	}), nil)
 	req := httptest.NewRequest(http.MethodPut, "/api/entries/entry-1", bytes.NewBufferString(`{"display_name":"James","picks":{"Group 1":"Scheffler"}}`))
 	recorder := httptest.NewRecorder()
 
@@ -788,7 +801,7 @@ func TestUpdateEntryReturnsForbiddenWhenUserDoesNotOwnEntry(t *testing.T) {
 		MockEnabled: true,
 		MockClerkID: "clerk_123",
 		MockEmail:   "james@example.com",
-	}))
+	}), nil)
 	req := httptest.NewRequest(http.MethodPut, "/api/entries/entry-1", bytes.NewBufferString(`{"display_name":"James","picks":{"Group 1":"Scheffler"}}`))
 	recorder := httptest.NewRecorder()
 
@@ -817,7 +830,7 @@ func TestUpdateEntryReturnsLockedWhenDeadlineHasPassed(t *testing.T) {
 		MockEnabled: true,
 		MockClerkID: clerkID,
 		MockEmail:   "james@example.com",
-	}))
+	}), nil)
 	req := httptest.NewRequest(http.MethodPut, "/api/entries/entry-1", bytes.NewBufferString(`{"display_name":"James","picks":{"Group 1":"Scheffler"}}`))
 	recorder := httptest.NewRecorder()
 
@@ -846,7 +859,7 @@ func TestUpdateEntryReturnsForbiddenWhenEntryIsNotInActiveYear(t *testing.T) {
 		MockEnabled: true,
 		MockClerkID: clerkID,
 		MockEmail:   "james@example.com",
-	}))
+	}), nil)
 	req := httptest.NewRequest(http.MethodPut, "/api/entries/entry-1", bytes.NewBufferString(`{"display_name":"James","picks":{"Group 1":"Scheffler"}}`))
 	recorder := httptest.NewRecorder()
 
@@ -899,7 +912,7 @@ func TestUpdateEntryUpdatesOwnedEntryBeforeDeadline(t *testing.T) {
 		MockEnabled: true,
 		MockClerkID: clerkID,
 		MockEmail:   "james@example.com",
-	}))
+	}), nil)
 	req := httptest.NewRequest(http.MethodPut, "/api/entries/entry-1", bytes.NewBufferString(`{"display_name":"James Updated","picks":{"Group 1":"Scheffler"},"in_overs":true}`))
 	recorder := httptest.NewRecorder()
 
