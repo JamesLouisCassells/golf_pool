@@ -121,7 +121,7 @@ Current priority before more feature work:
 - [x] `DELETE /api/admin/entries/:id` — delete entry
 - [x] `POST /api/admin/lock` — lock all entries (sets deadline to now)
 - [x] `POST /api/admin/refresh` — manually trigger a score data refresh
-- [ ] `Admin.vue`: entry table with edit/delete actions, refresh + lock buttons
+- [x] `Admin.vue`: entry table with edit/delete actions, refresh + lock buttons
 - [x] `Admin.vue`: config form for tournament settings
 - [x] Guard `/admin` route in Vue Router — redirect non-admins to home
 - [x] Guard admin API routes in Go middleware — return `403` for non-admins

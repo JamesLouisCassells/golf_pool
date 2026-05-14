@@ -9,6 +9,9 @@ const configLoading = ref(false)
 const configSaving = ref(false)
 const configErrorMessage = ref('')
 const configSuccessMessage = ref('')
+const operationsLoading = ref(false)
+const operationsErrorMessage = ref('')
+const operationsSuccessMessage = ref('')
 
 const entriesLoading = ref(false)
 const entriesErrorMessage = ref('')
@@ -30,6 +33,20 @@ const form = reactive({
   active: false,
   groups_json: '{\n  "Group 1": []\n}',
   pool_payouts_json: '{\n  "1": 4475\n}',
+})
+
+const operationsForm = reactive({
+  refresh_year: activeYear,
+  results_json:
+    '[\n' +
+    '  {\n' +
+    '    "golfer_name": "Scottie Scheffler",\n' +
+    '    "position": "T1",\n' +
+    '    "score": "-12",\n' +
+    '    "today": "-4",\n' +
+    '    "thru": "F"\n' +
+    '  }\n' +
+    ']',
 })
 
 const helperMessage = computed(() =>
@@ -130,6 +147,88 @@ async function saveConfig() {
     configErrorMessage.value = error instanceof Error ? error.message : 'Something went wrong while saving admin config.'
   } finally {
     configSaving.value = false
+  }
+}
+
+async function refreshResults() {
+  if (operationsLoading.value) {
+    return
+  }
+
+  operationsErrorMessage.value = ''
+  operationsSuccessMessage.value = ''
+
+  let results
+  try {
+    results = JSON.parse(operationsForm.results_json)
+  } catch {
+    operationsErrorMessage.value = 'Results JSON must be valid before refreshing standings.'
+    return
+  }
+
+  if (!Array.isArray(results)) {
+    operationsErrorMessage.value = 'Results JSON must be an array of golfer result objects.'
+    return
+  }
+
+  operationsLoading.value = true
+
+  try {
+    const response = await apiFetch('/api/admin/refresh', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        year: Number(operationsForm.refresh_year),
+        results,
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error(await responseMessage(response, 'Failed to refresh golfer results.'))
+    }
+
+    const payload = await response.json()
+    operationsSuccessMessage.value = `Stored ${payload.result_count} golfer results for ${payload.year}.`
+  } catch (error) {
+    operationsErrorMessage.value = error instanceof Error ? error.message : 'Something went wrong while refreshing golfer results.'
+  } finally {
+    operationsLoading.value = false
+  }
+}
+
+async function lockEntriesNow() {
+  if (operationsLoading.value) {
+    return
+  }
+
+  const confirmed = window.confirm('Lock the active tournament entries right now? This will pull the deadline to now.')
+  if (!confirmed) {
+    return
+  }
+
+  operationsErrorMessage.value = ''
+  operationsSuccessMessage.value = ''
+  operationsLoading.value = true
+
+  try {
+    const response = await apiFetch('/api/admin/lock', {
+      method: 'POST',
+    })
+
+    if (!response.ok) {
+      throw new Error(await responseMessage(response, 'Failed to lock active entries.'))
+    }
+
+    const payload = await response.json()
+    operationsSuccessMessage.value = `Locked ${payload.locked_entries} entries for ${payload.year}.`
+    await loadConfig()
+    await loadEntries()
+  } catch (error) {
+    operationsErrorMessage.value = error instanceof Error ? error.message : 'Something went wrong while locking entries.'
+  } finally {
+    operationsLoading.value = false
   }
 }
 
@@ -300,6 +399,62 @@ function prettyJSON(value) {
       <p class="status-label">Editing Year</p>
       <p class="status-value">{{ activeYear }}</p>
       <p class="status-meta">{{ helperMessage }}</p>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="section-heading">
+      <div>
+        <p class="kicker">Tournament Operations</p>
+        <h3>Refresh standings data or lock the field</h3>
+      </div>
+    </div>
+
+    <div class="entry-form">
+      <div v-if="operationsErrorMessage" class="alert alert-error">
+        <p>{{ operationsErrorMessage }}</p>
+      </div>
+
+      <div v-if="operationsSuccessMessage" class="alert alert-success">
+        <p>{{ operationsSuccessMessage }}</p>
+      </div>
+
+      <div class="field-grid">
+        <label class="field">
+          <span>Refresh year</span>
+          <input v-model="operationsForm.refresh_year" :disabled="operationsLoading" type="number" min="2024" step="1" />
+        </label>
+
+        <div class="field admin-ops-card">
+          <span>Entry lock</span>
+          <p class="helper-copy">
+            Use this if you need to slam the window shut immediately without hand-editing the deadline.
+          </p>
+          <button class="danger-button" type="button" :disabled="operationsLoading" @click="lockEntriesNow">
+            {{ operationsLoading ? 'Working...' : 'Lock Entries Now' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="field">
+        <span>Golfer results JSON</span>
+        <textarea
+          v-model="operationsForm.results_json"
+          :disabled="operationsLoading"
+          rows="12"
+          class="json-area"
+        />
+      </div>
+
+      <div class="form-footer">
+        <p class="helper-copy">
+          This is the manual standings snapshot path for now. Paste a results array, store it, then the public standings page will read the updated totals.
+        </p>
+
+        <button class="submit-button" type="button" :disabled="operationsLoading" @click="refreshResults">
+          {{ operationsLoading ? 'Saving Snapshot...' : 'Refresh Standings Snapshot' }}
+        </button>
+      </div>
     </div>
   </section>
 
