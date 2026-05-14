@@ -37,7 +37,7 @@ const form = reactive({
 
 const operationsForm = reactive({
   refresh_year: activeYear,
-  tournament_id: '',
+  tournament_id: '033',
   round_id: '',
   results_json:
     '[\n' +
@@ -208,8 +208,8 @@ async function fetchProviderResults() {
   operationsErrorMessage.value = ''
   operationsSuccessMessage.value = ''
 
-  const tournamentID = Number(operationsForm.tournament_id)
-  if (!Number.isInteger(tournamentID) || tournamentID <= 0) {
+  const tournamentID = String(operationsForm.tournament_id).trim()
+  if (tournamentID === '') {
     operationsErrorMessage.value = 'Tournament ID is required to fetch standings from the provider.'
     return
   }

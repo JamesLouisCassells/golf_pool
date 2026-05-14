@@ -611,6 +611,49 @@ func TestAdminRefreshSucceedsForAdmin(t *testing.T) {
 	}
 }
 
+func TestAdminRefreshFetchesProviderResultsWhenTournamentIDIsProvided(t *testing.T) {
+	t.Parallel()
+
+	store := stubStore{
+		replaceGolferResultsFn: func(ctx context.Context, year int, results []db.GolferResult) error {
+			if year != 2026 {
+				t.Fatalf("expected year 2026, got %d", year)
+			}
+			if len(results) != 1 {
+				t.Fatalf("expected 1 golfer result, got %d", len(results))
+			}
+			return nil
+		},
+	}
+
+	provider := stubProvider{
+		fetchLeaderboardFn: func(ctx context.Context, request golf.FetchRequest) ([]db.GolferResult, error) {
+			if request.TournamentID != "033" {
+				t.Fatalf("expected tournament id 033, got %s", request.TournamentID)
+			}
+			return []db.GolferResult{
+				{Year: 2026, GolferName: "Scottie Scheffler", Position: "1"},
+			}, nil
+		},
+	}
+
+	router := NewRouter(store, auth.NewMiddleware(nil, auth.Config{
+		MockEnabled: true,
+		MockClerkID: "admin-user",
+		MockEmail:   "admin@example.com",
+		MockAdmin:   true,
+	}), provider)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/refresh", bytes.NewBufferString(`{"year":2026,"tournament_id":"033"}`))
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+	}
+}
+
 func TestAdminLockReturnsSuccessForAdmin(t *testing.T) {
 	t.Parallel()
 

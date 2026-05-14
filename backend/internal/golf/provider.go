@@ -20,7 +20,7 @@ type Provider interface {
 
 type FetchRequest struct {
 	Year         int
-	TournamentID int
+	TournamentID string
 	RoundID      *int
 }
 
@@ -63,17 +63,18 @@ func (c *rapidLeaderboardClient) FetchLeaderboard(ctx context.Context, request F
 		return nil, fmt.Errorf("year is required")
 	}
 
-	if request.TournamentID == 0 {
+	tournamentID := strings.TrimSpace(request.TournamentID)
+	if tournamentID == "" {
 		return nil, fmt.Errorf("tournament id is required")
 	}
 
-	endpoint, err := url.Parse(c.baseURL + "/leaderboards")
+	endpoint, err := url.Parse(c.baseURL + "/leaderboard")
 	if err != nil {
 		return nil, fmt.Errorf("build leaderboard endpoint: %w", err)
 	}
 
 	query := endpoint.Query()
-	query.Set("tournId", strconv.Itoa(request.TournamentID))
+	query.Set("tournId", tournamentID)
 	query.Set("year", strconv.Itoa(request.Year))
 	if request.RoundID != nil && *request.RoundID > 0 {
 		query.Set("roundId", strconv.Itoa(*request.RoundID))
@@ -116,7 +117,10 @@ func extractLeaderboardResults(payload any, year int) ([]db.GolferResult, error)
 	results := make([]db.GolferResult, 0, len(rows))
 
 	for _, row := range rows {
-		golferName := firstString(row, "playerName", "player_name", "name", "player", "golfer_name")
+		golferName := fullName(row)
+		if golferName == "" {
+			golferName = firstString(row, "playerName", "player_name", "name", "player", "golfer_name")
+		}
 		position := firstString(row, "pos", "position", "place", "rank")
 		if golferName == "" || position == "" {
 			continue
@@ -138,7 +142,7 @@ func extractLeaderboardResults(payload any, year int) ([]db.GolferResult, error)
 func leaderboardRows(payload any) []map[string]any {
 	switch typed := payload.(type) {
 	case map[string]any:
-		for _, key := range []string{"leaderboard", "players", "results", "data"} {
+		for _, key := range []string{"leaderboardRows", "leaderboard", "players", "results", "data"} {
 			if rows, ok := typed[key].([]any); ok {
 				return objectRows(rows)
 			}
@@ -181,4 +185,10 @@ func firstString(row map[string]any, keys ...string) string {
 	}
 
 	return ""
+}
+
+func fullName(row map[string]any) string {
+	first := firstString(row, "firstName", "first_name")
+	last := firstString(row, "lastName", "last_name")
+	return strings.TrimSpace(strings.Join([]string{first, last}, " "))
 }

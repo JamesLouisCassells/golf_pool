@@ -8,13 +8,14 @@ func TestExtractLeaderboardResultsAcceptsCommonSlashGolfFields(t *testing.T) {
 	t.Parallel()
 
 	payload := map[string]any{
-		"leaderboard": []any{
+		"leaderboardRows": []any{
 			map[string]any{
-				"playerName": "Scottie Scheffler",
-				"pos":        "T1",
-				"total":      "-12",
-				"today":      "-4",
-				"thru":       "F",
+				"firstName": "Scottie",
+				"lastName":  "Scheffler",
+				"position":  "T1",
+				"total":     "-12",
+				"today":     "-4",
+				"thru":      "F",
 			},
 		},
 	}

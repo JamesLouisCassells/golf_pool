@@ -59,7 +59,7 @@ type updateTournamentConfigRequest struct {
 
 type refreshResultsRequest struct {
 	Year         int                   `json:"year"`
-	TournamentID int                   `json:"tournament_id"`
+	TournamentID string                `json:"tournament_id"`
 	RoundID      *int                  `json:"round_id"`
 	Results      []refreshResultRecord `json:"results"`
 }
@@ -599,14 +599,14 @@ func (h Handler) refreshAdminResults(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if request.TournamentID == 0 {
+		if strings.TrimSpace(request.TournamentID) == "" {
 			http.Error(w, "tournament_id is required when results are not provided", http.StatusBadRequest)
 			return
 		}
 
 		fetched, err := h.provider.FetchLeaderboard(r.Context(), golf.FetchRequest{
 			Year:         year,
-			TournamentID: request.TournamentID,
+			TournamentID: strings.TrimSpace(request.TournamentID),
 			RoundID:      request.RoundID,
 		})
 		if err != nil {
