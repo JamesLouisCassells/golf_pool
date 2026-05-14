@@ -466,6 +466,14 @@ textarea:disabled {
   line-height: 1.45;
 }
 
+.admin-ops-card {
+  padding: 16px 18px;
+  border-radius: 22px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.48);
+  align-content: start;
+}
+
 .checkbox-field {
   align-content: center;
   padding: 16px 18px;

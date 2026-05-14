@@ -10,6 +10,7 @@ import (
 	"github.com/JamesLouisCassells/golf_pool/backend/internal/auth"
 	"github.com/JamesLouisCassells/golf_pool/backend/internal/config"
 	"github.com/JamesLouisCassells/golf_pool/backend/internal/db"
+	"github.com/JamesLouisCassells/golf_pool/backend/internal/golf"
 )
 
 func main() {
@@ -29,6 +30,12 @@ func main() {
 	defer dbPool.Close()
 
 	store := db.NewStore(dbPool)
+	golfProvider := golf.NewProvider(golf.ProviderConfig{
+		Provider: cfg.GolfProvider,
+		BaseURL:  cfg.GolfAPIBaseURL,
+		APIKey:   cfg.GolfAPIKey,
+		APIHost:  cfg.GolfAPIHost,
+	})
 	authMiddleware := auth.NewMiddleware(store, auth.Config{
 		MockEnabled:       cfg.MockAuthEnabled,
 		MockClerkID:       cfg.MockAuthClerkID,
@@ -45,7 +52,7 @@ func main() {
 		AdminClaim:        cfg.AdminClaim,
 		AdminValue:        cfg.AdminValue,
 	})
-	router := api.NewRouter(store, authMiddleware)
+	router := api.NewRouter(store, authMiddleware, golfProvider)
 
 	log.Printf("connected to postgres")
 	if cfg.MockAuthEnabled {
@@ -53,6 +60,9 @@ func main() {
 	}
 	if cfg.ClerkJWKSURL == "" {
 		log.Printf("auth middleware is unconfigured: protected routes will return 503 until CLERK_JWKS_URL is set")
+	}
+	if golfProvider == nil {
+		log.Printf("golf provider refresh is unconfigured: /api/admin/refresh will only accept manual results payloads")
 	}
 	log.Printf("starting api on %s", cfg.HTTPAddr)
 

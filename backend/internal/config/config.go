@@ -26,6 +26,10 @@ type Config struct {
 	ClerkNameClaim         string
 	AdminClaim             string
 	AdminValue             string
+	GolfProvider           string
+	GolfAPIBaseURL         string
+	GolfAPIKey             string
+	GolfAPIHost            string
 }
 
 // Load reads configuration from environment variables and applies safe defaults
@@ -48,6 +52,10 @@ func Load() (Config, error) {
 		ClerkNameClaim:         getEnv("CLERK_NAME_CLAIM", "name"),
 		AdminClaim:             getEnv("CLERK_ADMIN_CLAIM", "role"),
 		AdminValue:             getEnv("CLERK_ADMIN_VALUE", "admin"),
+		GolfProvider:           strings.TrimSpace(strings.ToLower(os.Getenv("GOLF_PROVIDER"))),
+		GolfAPIBaseURL:         strings.TrimSpace(os.Getenv("GOLF_API_BASE_URL")),
+		GolfAPIKey:             strings.TrimSpace(os.Getenv("GOLF_API_KEY")),
+		GolfAPIHost:            strings.TrimSpace(os.Getenv("GOLF_API_HOST")),
 	}
 
 	if cfg.DatabaseURL == "" {

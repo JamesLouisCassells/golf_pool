@@ -32,7 +32,8 @@ type Store interface {
 }
 
 type Handler struct {
-	store Store
+	store    Store
+	provider golf.Provider
 }
 
 type createEntryRequest struct {
@@ -57,8 +58,10 @@ type updateTournamentConfigRequest struct {
 }
 
 type refreshResultsRequest struct {
-	Year    int                   `json:"year"`
-	Results []refreshResultRecord `json:"results"`
+	Year         int                   `json:"year"`
+	TournamentID string                `json:"tournament_id"`
+	RoundID      *int                  `json:"round_id"`
+	Results      []refreshResultRecord `json:"results"`
 }
 
 type refreshResultRecord struct {
@@ -72,8 +75,8 @@ type refreshResultRecord struct {
 // NewRouter wires the HTTP surface for the API.
 // Keeping route setup in one place makes it easier to see what the server
 // exposes today and where new handlers should be added later.
-func NewRouter(store Store, authMiddleware *auth.Middleware) http.Handler {
-	h := Handler{store: store}
+func NewRouter(store Store, authMiddleware *auth.Middleware, provider golf.Provider) http.Handler {
+	h := Handler{store: store, provider: provider}
 	r := chi.NewRouter()
 
 	r.Get("/healthz", h.healthz)
@@ -570,23 +573,48 @@ func (h Handler) refreshAdminResults(w http.ResponseWriter, r *http.Request) {
 		year = activeConfig.Year
 	}
 
-	results := make([]db.GolferResult, 0, len(request.Results))
-	for _, result := range request.Results {
-		golferName := strings.TrimSpace(result.GolferName)
-		position := strings.TrimSpace(result.Position)
-		if golferName == "" || position == "" {
-			http.Error(w, "each golfer result requires golfer_name and position", http.StatusBadRequest)
+	var results []db.GolferResult
+	if len(request.Results) > 0 {
+		results = make([]db.GolferResult, 0, len(request.Results))
+		for _, result := range request.Results {
+			golferName := strings.TrimSpace(result.GolferName)
+			position := strings.TrimSpace(result.Position)
+			if golferName == "" || position == "" {
+				http.Error(w, "each golfer result requires golfer_name and position", http.StatusBadRequest)
+				return
+			}
+
+			results = append(results, db.GolferResult{
+				Year:       year,
+				GolferName: golferName,
+				Position:   position,
+				Score:      strings.TrimSpace(result.Score),
+				Today:      strings.TrimSpace(result.Today),
+				Thru:       strings.TrimSpace(result.Thru),
+			})
+		}
+	} else {
+		if h.provider == nil {
+			http.Error(w, "golf provider refresh is not configured", http.StatusServiceUnavailable)
 			return
 		}
 
-		results = append(results, db.GolferResult{
-			Year:       year,
-			GolferName: golferName,
-			Position:   position,
-			Score:      strings.TrimSpace(result.Score),
-			Today:      strings.TrimSpace(result.Today),
-			Thru:       strings.TrimSpace(result.Thru),
+		if strings.TrimSpace(request.TournamentID) == "" {
+			http.Error(w, "tournament_id is required when results are not provided", http.StatusBadRequest)
+			return
+		}
+
+		fetched, err := h.provider.FetchLeaderboard(r.Context(), golf.FetchRequest{
+			Year:         year,
+			TournamentID: strings.TrimSpace(request.TournamentID),
+			RoundID:      request.RoundID,
 		})
+		if err != nil {
+			http.Error(w, "failed to fetch golfer results from provider", http.StatusBadGateway)
+			return
+		}
+
+		results = fetched
 	}
 
 	if err := h.store.ReplaceGolferResults(r.Context(), year, results); err != nil {
