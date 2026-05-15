@@ -26,6 +26,7 @@ const form = reactive({
   entry_deadline: '',
   start_date: '',
   end_date: '',
+  provider_tournament_id: '',
   mutt_multiplier: '2',
   old_mutt_multiplier: '3',
   frl_winner: '',
@@ -37,7 +38,7 @@ const form = reactive({
 
 const operationsForm = reactive({
   refresh_year: activeYear,
-  tournament_id: '033',
+  tournament_id: '',
   round_id: '',
   results_json:
     '[\n' +
@@ -77,6 +78,7 @@ async function loadConfig() {
     form.entry_deadline = toDateTimeLocalValue(config.entry_deadline)
     form.start_date = toDateInputValue(config.start_date)
     form.end_date = toDateInputValue(config.end_date)
+    form.provider_tournament_id = config.provider_tournament_id ?? ''
     form.mutt_multiplier = config.mutt_multiplier ?? '2'
     form.old_mutt_multiplier = config.old_mutt_multiplier ?? '3'
     form.frl_winner = config.frl_winner ?? ''
@@ -84,6 +86,9 @@ async function loadConfig() {
     form.active = Boolean(config.active)
     form.groups_json = prettyJSON(config.groups ?? {})
     form.pool_payouts_json = prettyJSON(config.pool_payouts ?? {})
+    if (!String(operationsForm.tournament_id).trim() && config.provider_tournament_id) {
+      operationsForm.tournament_id = config.provider_tournament_id
+    }
   } catch (error) {
     configErrorMessage.value = error instanceof Error ? error.message : 'Something went wrong while loading admin config.'
   } finally {
@@ -114,6 +119,7 @@ async function saveConfig() {
     entry_deadline: form.entry_deadline ? new Date(form.entry_deadline).toISOString() : null,
     start_date: form.start_date ? new Date(`${form.start_date}T00:00:00`).toISOString() : null,
     end_date: form.end_date ? new Date(`${form.end_date}T00:00:00`).toISOString() : null,
+    provider_tournament_id: form.provider_tournament_id.trim() || null,
     groups,
     mutt_multiplier: form.mutt_multiplier.trim(),
     old_mutt_multiplier: form.old_mutt_multiplier.trim(),
@@ -142,8 +148,12 @@ async function saveConfig() {
     form.entry_deadline = toDateTimeLocalValue(updated.entry_deadline)
     form.start_date = toDateInputValue(updated.start_date)
     form.end_date = toDateInputValue(updated.end_date)
+    form.provider_tournament_id = updated.provider_tournament_id ?? ''
     form.groups_json = prettyJSON(updated.groups ?? {})
     form.pool_payouts_json = prettyJSON(updated.pool_payouts ?? {})
+    if (updated.provider_tournament_id) {
+      operationsForm.tournament_id = updated.provider_tournament_id
+    }
     configSuccessMessage.value = 'Tournament config saved.'
   } catch (error) {
     configErrorMessage.value = error instanceof Error ? error.message : 'Something went wrong while saving admin config.'
@@ -209,10 +219,6 @@ async function fetchProviderResults() {
   operationsSuccessMessage.value = ''
 
   const tournamentID = String(operationsForm.tournament_id).trim()
-  if (tournamentID === '') {
-    operationsErrorMessage.value = 'Tournament ID is required to fetch standings from the provider.'
-    return
-  }
 
   const roundIDValue = String(operationsForm.round_id).trim()
   const roundID = roundIDValue === '' ? null : Number(roundIDValue)
@@ -231,7 +237,7 @@ async function fetchProviderResults() {
       },
       body: JSON.stringify({
         year: Number(operationsForm.refresh_year),
-        tournament_id: tournamentID,
+        tournament_id: tournamentID || null,
         round_id: roundID,
       }),
     })
@@ -481,10 +487,8 @@ function prettyJSON(value) {
           <input
             v-model="operationsForm.tournament_id"
             :disabled="operationsLoading"
-            type="number"
-            min="1"
-            step="1"
-            placeholder="Required for provider fetches"
+            type="text"
+            placeholder="Optional if saved in config"
           />
         </label>
       </div>
@@ -589,6 +593,18 @@ function prettyJSON(value) {
         <label class="field">
           <span>End date</span>
           <input v-model="form.end_date" :disabled="configSaving" type="date" />
+        </label>
+      </div>
+
+      <div class="field-grid">
+        <label class="field">
+          <span>Provider tournament ID</span>
+          <input
+            v-model="form.provider_tournament_id"
+            :disabled="configSaving"
+            type="text"
+            placeholder="Keep zero padding, for example 033"
+          />
         </label>
       </div>
 

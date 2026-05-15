@@ -96,10 +96,10 @@ Current priority before more feature work:
 - [x] Disable form and show a locked message after deadline passes
 
 ### Golf scores + payout calculation
-- [ ] Port RapidAPI polling logic from Node.js to Go (`golf/` package)
+- [x] Port RapidAPI polling logic from Node.js to Go (`golf/` package)
 - [x] Port payout calculation and tie distribution logic to Go
 - [x] Port golfer name matching logic to Go
-- [ ] Implement poll interval logic (active tournament hours vs. off-season)
+- [x] Implement poll interval logic (active tournament hours vs. off-season)
 - [x] Apply mutt/old-mutt multipliers and FRL payout from `tournament_config`
 - [x] `GET /api/standings/:year` — return entries sorted by total payout with per-group breakdown
 

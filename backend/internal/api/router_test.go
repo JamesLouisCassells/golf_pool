@@ -264,18 +264,22 @@ func TestAdminConfigUpdateSucceedsForAdmin(t *testing.T) {
 			if params.MuttMultiplier != "2.5" {
 				t.Fatalf("expected mutt multiplier 2.5, got %s", params.MuttMultiplier)
 			}
+			if params.ProviderTournamentID == nil || *params.ProviderTournamentID != "033" {
+				t.Fatalf("expected provider tournament id 033, got %#v", params.ProviderTournamentID)
+			}
 			return db.TournamentConfig{
-				Year:              params.Year,
-				EntryDeadline:     params.EntryDeadline,
-				StartDate:         params.StartDate,
-				EndDate:           params.EndDate,
-				Groups:            params.Groups,
-				MuttMultiplier:    params.MuttMultiplier,
-				OldMuttMultiplier: params.OldMuttMultiplier,
-				PoolPayouts:       params.PoolPayouts,
-				FRLWinner:         params.FRLWinner,
-				FRLPayout:         params.FRLPayout,
-				Active:            params.Active,
+				Year:                 params.Year,
+				EntryDeadline:        params.EntryDeadline,
+				StartDate:            params.StartDate,
+				EndDate:              params.EndDate,
+				ProviderTournamentID: params.ProviderTournamentID,
+				Groups:               params.Groups,
+				MuttMultiplier:       params.MuttMultiplier,
+				OldMuttMultiplier:    params.OldMuttMultiplier,
+				PoolPayouts:          params.PoolPayouts,
+				FRLWinner:            params.FRLWinner,
+				FRLPayout:            params.FRLPayout,
+				Active:               params.Active,
 			}, nil
 		},
 	}
@@ -287,7 +291,7 @@ func TestAdminConfigUpdateSucceedsForAdmin(t *testing.T) {
 		MockAdmin:   true,
 	}), nil)
 
-	reqBody := `{"entry_deadline":"` + now.Format(time.RFC3339) + `","start_date":"` + now.Format(time.RFC3339) + `","end_date":"` + now.Format(time.RFC3339) + `","groups":{"Group 1":["Scheffler"]},"mutt_multiplier":"2.5","old_mutt_multiplier":"3.5","pool_payouts":{"1":4475},"frl_winner":"Rose","frl_payout":500000,"active":true}`
+	reqBody := `{"entry_deadline":"` + now.Format(time.RFC3339) + `","start_date":"` + now.Format(time.RFC3339) + `","end_date":"` + now.Format(time.RFC3339) + `","provider_tournament_id":"033","groups":{"Group 1":["Scheffler"]},"mutt_multiplier":"2.5","old_mutt_multiplier":"3.5","pool_payouts":{"1":4475},"frl_winner":"Rose","frl_payout":500000,"active":true}`
 	req := httptest.NewRequest(http.MethodPut, "/api/admin/config/2026", bytes.NewBufferString(reqBody))
 	recorder := httptest.NewRecorder()
 
@@ -645,6 +649,56 @@ func TestAdminRefreshFetchesProviderResultsWhenTournamentIDIsProvided(t *testing
 	}), provider)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/admin/refresh", bytes.NewBufferString(`{"year":2026,"tournament_id":"033"}`))
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+	}
+}
+
+func TestAdminRefreshUsesSavedProviderTournamentIDWhenRequestOmitsIt(t *testing.T) {
+	t.Parallel()
+
+	tournamentID := "033"
+	store := stubStore{
+		getConfigFn: func(ctx context.Context, year int) (db.TournamentConfig, error) {
+			if year != 2026 {
+				t.Fatalf("expected year 2026, got %d", year)
+			}
+			return db.TournamentConfig{Year: 2026, ProviderTournamentID: &tournamentID, Active: true}, nil
+		},
+		replaceGolferResultsFn: func(ctx context.Context, year int, results []db.GolferResult) error {
+			if year != 2026 {
+				t.Fatalf("expected year 2026, got %d", year)
+			}
+			if len(results) != 1 || results[0].GolferName != "Scottie Scheffler" {
+				t.Fatalf("unexpected results: %#v", results)
+			}
+			return nil
+		},
+	}
+
+	provider := stubProvider{
+		fetchLeaderboardFn: func(ctx context.Context, request golf.FetchRequest) ([]db.GolferResult, error) {
+			if request.TournamentID != "033" {
+				t.Fatalf("expected tournament id 033, got %s", request.TournamentID)
+			}
+			return []db.GolferResult{
+				{Year: 2026, GolferName: "Scottie Scheffler", Position: "1"},
+			}, nil
+		},
+	}
+
+	router := NewRouter(store, auth.NewMiddleware(nil, auth.Config{
+		MockEnabled: true,
+		MockClerkID: "admin-user",
+		MockEmail:   "admin@example.com",
+		MockAdmin:   true,
+	}), provider)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/refresh", bytes.NewBufferString(`{"year":2026}`))
 	recorder := httptest.NewRecorder()
 
 	router.ServeHTTP(recorder, req)

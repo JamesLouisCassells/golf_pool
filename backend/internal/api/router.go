@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -45,16 +46,17 @@ type createEntryRequest struct {
 type updateEntryRequest = createEntryRequest
 
 type updateTournamentConfigRequest struct {
-	EntryDeadline     *time.Time     `json:"entry_deadline"`
-	StartDate         *time.Time     `json:"start_date"`
-	EndDate           *time.Time     `json:"end_date"`
-	Groups            map[string]any `json:"groups"`
-	MuttMultiplier    string         `json:"mutt_multiplier"`
-	OldMuttMultiplier string         `json:"old_mutt_multiplier"`
-	PoolPayouts       map[string]any `json:"pool_payouts"`
-	FRLWinner         *string        `json:"frl_winner"`
-	FRLPayout         int            `json:"frl_payout"`
-	Active            bool           `json:"active"`
+	EntryDeadline        *time.Time     `json:"entry_deadline"`
+	StartDate            *time.Time     `json:"start_date"`
+	EndDate              *time.Time     `json:"end_date"`
+	ProviderTournamentID *string        `json:"provider_tournament_id"`
+	Groups               map[string]any `json:"groups"`
+	MuttMultiplier       string         `json:"mutt_multiplier"`
+	OldMuttMultiplier    string         `json:"old_mutt_multiplier"`
+	PoolPayouts          map[string]any `json:"pool_payouts"`
+	FRLWinner            *string        `json:"frl_winner"`
+	FRLPayout            int            `json:"frl_payout"`
+	Active               bool           `json:"active"`
 }
 
 type refreshResultsRequest struct {
@@ -431,17 +433,18 @@ func (h Handler) updateAdminConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cfg, err := h.store.UpdateTournamentConfig(r.Context(), db.UpdateTournamentConfigParams{
-		Year:              year,
-		EntryDeadline:     request.EntryDeadline,
-		StartDate:         request.StartDate,
-		EndDate:           request.EndDate,
-		Groups:            request.Groups,
-		MuttMultiplier:    strings.TrimSpace(request.MuttMultiplier),
-		OldMuttMultiplier: strings.TrimSpace(request.OldMuttMultiplier),
-		PoolPayouts:       request.PoolPayouts,
-		FRLWinner:         request.FRLWinner,
-		FRLPayout:         request.FRLPayout,
-		Active:            request.Active,
+		Year:                 year,
+		EntryDeadline:        request.EntryDeadline,
+		StartDate:            request.StartDate,
+		EndDate:              request.EndDate,
+		ProviderTournamentID: trimOptionalString(request.ProviderTournamentID),
+		Groups:               request.Groups,
+		MuttMultiplier:       strings.TrimSpace(request.MuttMultiplier),
+		OldMuttMultiplier:    strings.TrimSpace(request.OldMuttMultiplier),
+		PoolPayouts:          request.PoolPayouts,
+		FRLWinner:            request.FRLWinner,
+		FRLPayout:            request.FRLPayout,
+		Active:               request.Active,
 	})
 	if err != nil {
 		if err == db.ErrNotFound {
@@ -557,20 +560,22 @@ func (h Handler) refreshAdminResults(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	cfgYear, tournamentID, err := h.refreshTargetConfig(r.Context(), request)
+	if err != nil {
+		switch err {
+		case db.ErrNotFound:
+			http.Error(w, "config not found", http.StatusNotFound)
+		case errTournamentIDRequired:
+			http.Error(w, "tournament_id is required when results are not provided", http.StatusBadRequest)
+		default:
+			http.Error(w, "failed to load tournament config", http.StatusInternalServerError)
+		}
+		return
+	}
+
 	year := request.Year
 	if year == 0 {
-		activeConfig, err := h.store.GetActiveConfig(r.Context())
-		if err != nil {
-			if err == db.ErrNotFound {
-				http.Error(w, "active tournament config not found", http.StatusNotFound)
-				return
-			}
-
-			http.Error(w, "failed to load active tournament config", http.StatusInternalServerError)
-			return
-		}
-
-		year = activeConfig.Year
+		year = cfgYear
 	}
 
 	var results []db.GolferResult
@@ -599,14 +604,9 @@ func (h Handler) refreshAdminResults(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if strings.TrimSpace(request.TournamentID) == "" {
-			http.Error(w, "tournament_id is required when results are not provided", http.StatusBadRequest)
-			return
-		}
-
 		fetched, err := h.provider.FetchLeaderboard(r.Context(), golf.FetchRequest{
 			Year:         year,
-			TournamentID: strings.TrimSpace(request.TournamentID),
+			TournamentID: tournamentID,
 			RoundID:      request.RoundID,
 		})
 		if err != nil {
@@ -630,6 +630,63 @@ func (h Handler) refreshAdminResults(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 	}
+}
+
+func (h Handler) refreshTargetConfig(ctx context.Context, request refreshResultsRequest) (int, string, error) {
+	if len(request.Results) > 0 {
+		if request.Year != 0 {
+			return request.Year, "", nil
+		}
+
+		activeConfig, err := h.store.GetActiveConfig(ctx)
+		if err != nil {
+			return 0, "", err
+		}
+
+		return activeConfig.Year, "", nil
+	}
+
+	tournamentID := strings.TrimSpace(request.TournamentID)
+	if request.Year != 0 && tournamentID != "" {
+		return request.Year, tournamentID, nil
+	}
+
+	cfg, err := h.configForRefreshYear(ctx, request.Year)
+	if err != nil {
+		return 0, "", err
+	}
+
+	if tournamentID == "" && cfg.ProviderTournamentID != nil {
+		tournamentID = strings.TrimSpace(*cfg.ProviderTournamentID)
+	}
+	if tournamentID == "" {
+		return 0, "", errTournamentIDRequired
+	}
+
+	return cfg.Year, tournamentID, nil
+}
+
+func (h Handler) configForRefreshYear(ctx context.Context, year int) (db.TournamentConfig, error) {
+	if year != 0 {
+		return h.store.GetConfig(ctx, year)
+	}
+
+	return h.store.GetActiveConfig(ctx)
+}
+
+var errTournamentIDRequired = errors.New("tournament id is required")
+
+func trimOptionalString(value *string) *string {
+	if value == nil {
+		return nil
+	}
+
+	trimmed := strings.TrimSpace(*value)
+	if trimmed == "" {
+		return nil
+	}
+
+	return &trimmed
 }
 
 func (h Handler) lockAdminEntries(w http.ResponseWriter, r *http.Request) {
