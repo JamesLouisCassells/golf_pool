@@ -1,7 +1,8 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { fetchActiveConfig } from '../lib/tournament'
 
-const activeYear = new Date().getFullYear()
+const activeYear = ref('')
 
 const loading = ref(true)
 const refreshing = ref(false)
@@ -48,7 +49,12 @@ async function loadStandings(options = {}) {
   errorMessage.value = ''
 
   try {
-    const response = await fetch(`/api/standings/${activeYear}`)
+    if (!activeYear.value) {
+      const config = await fetchActiveConfig()
+      activeYear.value = config.year ?? ''
+    }
+
+    const response = await fetch(`/api/standings/${activeYear.value}`)
     if (!response.ok) {
       throw new Error(await responseMessage(response, 'Failed to load standings.'))
     }
@@ -89,7 +95,7 @@ async function responseMessage(response, fallback) {
   <section class="panel hero-panel">
     <div class="hero-copy">
       <p class="kicker">Live Standings</p>
-      <h2>Projected pool leaderboard for {{ activeYear }}</h2>
+      <h2>Projected pool leaderboard for {{ activeYear || 'the active year' }}</h2>
       <p>
         This page now reads the real standings endpoint. Totals are built from
         projected tournament winnings, tie-split payouts, mutt multipliers, and

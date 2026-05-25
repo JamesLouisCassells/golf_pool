@@ -196,8 +196,9 @@ What the current frontend does:
 
 What is still missing:
 
-- automatic live golf provider ingestion / polling for standings
 - final end-to-end proof against a real Clerk instance
+- more standings UI polish and component cleanup
+- deployment / CI / infra follow-through
 - polish around loading, error, and mobile states
 
 ### Golf Provider Refresh Setup

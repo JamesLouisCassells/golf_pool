@@ -53,6 +53,7 @@ func main() {
 		AdminValue:        cfg.AdminValue,
 	})
 	router := api.NewRouter(store, authMiddleware, golfProvider)
+	scheduler := golf.NewScheduler(store, golfProvider, log.Default())
 
 	log.Printf("connected to postgres")
 	if cfg.MockAuthEnabled {
@@ -63,6 +64,9 @@ func main() {
 	}
 	if golfProvider == nil {
 		log.Printf("golf provider refresh is unconfigured: /api/admin/refresh will only accept manual results payloads")
+	} else if scheduler != nil {
+		go scheduler.Run(context.Background())
+		log.Printf("automatic golf refresh enabled for active tournament windows")
 	}
 	log.Printf("starting api on %s", cfg.HTTPAddr)
 

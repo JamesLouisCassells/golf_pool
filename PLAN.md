@@ -31,16 +31,16 @@ A ground-up rewrite of the Masters Pool app. Goals: clean maintainable codebase,
 - Vite for build tooling — fast, minimal config
 - Vue Router for client-side navigation
 - Custom CSS is currently in use; Tailwind remains optional rather than adopted
-- Clerk Vue SDK is still planned for auth state and login/logout
+- Clerk Vue SDK is now wired for auth state and login/logout
 - The existing entry cards, side leaderboard, and standings layout are still intended to be ported into Vue components
 
 ### Auth — Clerk
 - Handles all login flows: email/password, Google OAuth, GitHub OAuth
 - Free tier up to 10,000 MAU
-- Clerk should be initialized in the Vue frontend so the browser owns sign-in and session state
-- Go backend should validate Clerk session JWTs locally against JWKS — no passwords or auth data stored locally
-- The backend should avoid depending on Clerk Backend API lookups during ordinary authenticated requests
-- Small custom session claims should carry the identity fields the API needs most often
+- Clerk is initialized in the Vue frontend so the browser owns sign-in and session state
+- Go backend validates Clerk session JWTs locally against JWKS — no passwords or auth data stored locally
+- The backend avoids depending on Clerk Backend API lookups during ordinary authenticated requests
+- Small custom session claims carry the identity fields the API needs most often
 - Admin role is a custom claim set in Clerk's dashboard, checked by Go middleware
 
 ### Database — PostgreSQL

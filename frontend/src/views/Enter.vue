@@ -2,8 +2,9 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 
 import { apiFetch, responseMessage } from '../lib/api'
+import { fetchActiveConfig } from '../lib/tournament'
 
-const activeYear = new Date().getFullYear()
+const activeYear = ref('')
 
 const loading = ref(true)
 const saving = ref(false)
@@ -86,13 +87,9 @@ async function loadPage() {
   successMessage.value = ''
 
   try {
-    const configResponse = await apiFetch(`/api/config/${activeYear}`)
-    if (!configResponse.ok) {
-      throw new Error(await responseMessage(configResponse, 'Failed to load tournament config.'))
-    }
-
-    const configPayload = await configResponse.json()
+    const configPayload = await fetchActiveConfig()
     config.value = configPayload
+    activeYear.value = configPayload.year ?? ''
 
     initializeEmptyPicks(configPayload.groups)
 
@@ -254,7 +251,7 @@ function normalizePlayerOption(player) {
 <template>
   <section class="panel hero-panel">
     <div class="hero-copy">
-      <p class="kicker">Active Year {{ activeYear }}</p>
+      <p class="kicker">Active Year {{ activeYear || 'Not set' }}</p>
       <h2>Build your Masters ticket</h2>
       <p>
         This view is talking to the real Go API. It loads the tournament config,
