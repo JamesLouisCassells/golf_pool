@@ -2,8 +2,10 @@
 import { computed, reactive, ref } from 'vue'
 
 import { apiFetch, responseMessage } from '../lib/api'
+import { fetchActiveConfig } from '../lib/tournament'
 
-const activeYear = new Date().getFullYear()
+const currentYear = new Date().getFullYear()
+const activeYear = ref(currentYear)
 
 const configLoading = ref(false)
 const configSaving = ref(false)
@@ -37,7 +39,7 @@ const form = reactive({
 })
 
 const operationsForm = reactive({
-  refresh_year: activeYear,
+  refresh_year: currentYear,
   tournament_id: '',
   round_id: '',
   results_json:
@@ -69,12 +71,9 @@ async function loadConfig() {
   configSuccessMessage.value = ''
 
   try {
-    const response = await apiFetch(`/api/admin/config/${activeYear}`)
-    if (!response.ok) {
-      throw new Error(await responseMessage(response, 'Failed to load admin config.'))
-    }
-
-    const config = await response.json()
+    const config = await fetchActiveConfig({ admin: true })
+    activeYear.value = config.year ?? currentYear
+    operationsForm.refresh_year = activeYear.value
     form.entry_deadline = toDateTimeLocalValue(config.entry_deadline)
     form.start_date = toDateInputValue(config.start_date)
     form.end_date = toDateInputValue(config.end_date)
@@ -90,6 +89,13 @@ async function loadConfig() {
       operationsForm.tournament_id = config.provider_tournament_id
     }
   } catch (error) {
+    if (error instanceof Error && error.status === 404) {
+      activeYear.value = currentYear
+      operationsForm.refresh_year = currentYear
+      configSuccessMessage.value = `No active tournament config exists yet. Saving will seed ${currentYear}.`
+      return
+    }
+
     configErrorMessage.value = error instanceof Error ? error.message : 'Something went wrong while loading admin config.'
   } finally {
     configLoading.value = false
@@ -132,7 +138,7 @@ async function saveConfig() {
   configSaving.value = true
 
   try {
-    const response = await apiFetch(`/api/admin/config/${activeYear}`, {
+    const response = await apiFetch(`/api/admin/config/${activeYear.value}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -145,6 +151,8 @@ async function saveConfig() {
     }
 
     const updated = await response.json()
+    activeYear.value = updated.year ?? activeYear.value
+    operationsForm.refresh_year = activeYear.value
     form.entry_deadline = toDateTimeLocalValue(updated.entry_deadline)
     form.start_date = toDateInputValue(updated.start_date)
     form.end_date = toDateInputValue(updated.end_date)

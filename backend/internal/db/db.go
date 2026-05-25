@@ -501,21 +501,47 @@ func (s *Store) UpdateTournamentConfig(ctx context.Context, params UpdateTournam
 		return TournamentConfig{}, fmt.Errorf("encode pool payouts json: %w", err)
 	}
 
+	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return TournamentConfig{}, fmt.Errorf("begin tournament config transaction for year %d: %w", params.Year, err)
+	}
+	defer tx.Rollback(ctx)
+
+	if params.Active {
+		if _, err := tx.Exec(ctx, `UPDATE tournament_config SET active = false WHERE year <> $1`, params.Year); err != nil {
+			return TournamentConfig{}, fmt.Errorf("clear active tournament config for year %d: %w", params.Year, err)
+		}
+	}
+
 	const query = `
-		UPDATE tournament_config
-		SET
-			entry_deadline = $2,
-			start_date = $3,
-			end_date = $4,
-			provider_tournament_id = $5,
-			groups = $6::jsonb,
-			mutt_multiplier = $7::numeric,
-			old_mutt_multiplier = $8::numeric,
-			pool_payouts = $9::jsonb,
-			frl_winner = $10,
-			frl_payout = $11,
-			active = $12
-		WHERE year = $1
+		INSERT INTO tournament_config (
+			year,
+			entry_deadline,
+			start_date,
+			end_date,
+			provider_tournament_id,
+			groups,
+			mutt_multiplier,
+			old_mutt_multiplier,
+			pool_payouts,
+			frl_winner,
+			frl_payout,
+			active
+		)
+		VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::numeric, $8::numeric, $9::jsonb, $10, $11, $12)
+		ON CONFLICT (year)
+		DO UPDATE SET
+			entry_deadline = EXCLUDED.entry_deadline,
+			start_date = EXCLUDED.start_date,
+			end_date = EXCLUDED.end_date,
+			provider_tournament_id = EXCLUDED.provider_tournament_id,
+			groups = EXCLUDED.groups,
+			mutt_multiplier = EXCLUDED.mutt_multiplier,
+			old_mutt_multiplier = EXCLUDED.old_mutt_multiplier,
+			pool_payouts = EXCLUDED.pool_payouts,
+			frl_winner = EXCLUDED.frl_winner,
+			frl_payout = EXCLUDED.frl_payout,
+			active = EXCLUDED.active
 		RETURNING
 			year,
 			entry_deadline,
@@ -531,8 +557,9 @@ func (s *Store) UpdateTournamentConfig(ctx context.Context, params UpdateTournam
 			active
 	`
 
-	cfg, err := s.getConfigByQuery(
+	cfg, err := getConfigByQueryRow(
 		ctx,
+		tx,
 		query,
 		params.Year,
 		params.EntryDeadline,
@@ -548,22 +575,28 @@ func (s *Store) UpdateTournamentConfig(ctx context.Context, params UpdateTournam
 		params.Active,
 	)
 	if err != nil {
-		if errors.Is(err, ErrNotFound) {
-			return TournamentConfig{}, ErrNotFound
-		}
+		return TournamentConfig{}, fmt.Errorf("upsert tournament config for year %d: %w", params.Year, err)
+	}
 
-		return TournamentConfig{}, fmt.Errorf("update tournament config for year %d: %w", params.Year, err)
+	if err := tx.Commit(ctx); err != nil {
+		return TournamentConfig{}, fmt.Errorf("commit tournament config transaction for year %d: %w", params.Year, err)
 	}
 
 	return cfg, nil
 }
 
 func (s *Store) getConfigByQuery(ctx context.Context, query string, args ...any) (TournamentConfig, error) {
+	return getConfigByQueryRow(ctx, s.pool, query, args...)
+}
+
+func getConfigByQueryRow(ctx context.Context, queryer interface {
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}, query string, args ...any) (TournamentConfig, error) {
 	var cfg TournamentConfig
 	var groupsRaw []byte
 	var payoutsRaw []byte
 
-	err := s.pool.QueryRow(ctx, query, args...).Scan(
+	err := queryer.QueryRow(ctx, query, args...).Scan(
 		&cfg.Year,
 		&cfg.EntryDeadline,
 		&cfg.StartDate,

@@ -82,6 +82,7 @@ func NewRouter(store Store, authMiddleware *auth.Middleware, provider golf.Provi
 	r := chi.NewRouter()
 
 	r.Get("/healthz", h.healthz)
+	r.Get("/api/config/active", h.getActiveConfig)
 	r.Get("/api/config/{year}", h.getConfig)
 	r.Get("/api/entries", h.listEntries)
 	r.Get("/api/standings/{year}", h.getStandings)
@@ -89,6 +90,7 @@ func NewRouter(store Store, authMiddleware *auth.Middleware, provider golf.Provi
 	r.With(authMiddleware.RequireAuth).Get("/api/entries/mine", h.getMyEntry)
 	r.With(authMiddleware.RequireAuth).Post("/api/entries", h.createEntry)
 	r.With(authMiddleware.RequireAuth).Put("/api/entries/{id}", h.updateEntry)
+	r.With(authMiddleware.RequireAdmin).Get("/api/admin/config/active", h.getActiveAdminConfig)
 	r.With(authMiddleware.RequireAdmin).Get("/api/admin/config/{year}", h.getAdminConfig)
 	r.With(authMiddleware.RequireAdmin).Put("/api/admin/config/{year}", h.updateAdminConfig)
 	r.With(authMiddleware.RequireAdmin).Get("/api/admin/entries", h.listAdminEntries)
@@ -137,8 +139,31 @@ func (h Handler) getConfig(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (h Handler) getActiveConfig(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	cfg, err := h.store.GetActiveConfig(r.Context())
+	if err != nil {
+		if err == db.ErrNotFound {
+			http.Error(w, "active config not found", http.StatusNotFound)
+			return
+		}
+
+		http.Error(w, "failed to load active config", http.StatusInternalServerError)
+		return
+	}
+
+	if err := json.NewEncoder(w).Encode(cfg); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
+}
+
 func (h Handler) getAdminConfig(w http.ResponseWriter, r *http.Request) {
 	h.getConfig(w, r)
+}
+
+func (h Handler) getActiveAdminConfig(w http.ResponseWriter, r *http.Request) {
+	h.getActiveConfig(w, r)
 }
 
 func (h Handler) me(w http.ResponseWriter, r *http.Request) {

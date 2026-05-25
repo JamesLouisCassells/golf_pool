@@ -252,6 +252,53 @@ func TestAdminConfigRouteReturnsConfigForAdmin(t *testing.T) {
 	}
 }
 
+func TestActiveConfigRouteReturnsConfig(t *testing.T) {
+	t.Parallel()
+
+	store := stubStore{
+		getActiveConfigFn: func(ctx context.Context) (db.TournamentConfig, error) {
+			return db.TournamentConfig{Year: 2026, Active: true}, nil
+		},
+	}
+
+	router := NewRouter(store, auth.NewMiddleware(nil, auth.Config{}), nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/config/active", nil)
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+	}
+}
+
+func TestAdminActiveConfigRouteReturnsConfigForAdmin(t *testing.T) {
+	t.Parallel()
+
+	store := stubStore{
+		getActiveConfigFn: func(ctx context.Context) (db.TournamentConfig, error) {
+			return db.TournamentConfig{Year: 2026, Active: true}, nil
+		},
+	}
+
+	router := NewRouter(store, auth.NewMiddleware(nil, auth.Config{
+		MockEnabled: true,
+		MockClerkID: "admin-user",
+		MockEmail:   "admin@example.com",
+		MockAdmin:   true,
+	}), nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/admin/config/active", nil)
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+	}
+}
+
 func TestAdminConfigUpdateSucceedsForAdmin(t *testing.T) {
 	t.Parallel()
 
