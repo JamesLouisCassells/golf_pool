@@ -25,6 +25,16 @@ const updatedAtLabel = computed(() => {
 
 const leader = computed(() => entries.value[0] ?? null)
 const topEntries = computed(() => entries.value.slice(0, 5))
+const totalProjectedPayout = computed(() =>
+  entries.value.reduce((total, entry) => total + Number(entry.total_payout ?? 0), 0),
+)
+const averageProjectedPayout = computed(() => {
+  if (entries.value.length === 0) {
+    return 0
+  }
+
+  return Math.round(totalProjectedPayout.value / entries.value.length)
+})
 
 onMounted(async () => {
   await loadStandings()
@@ -104,6 +114,21 @@ async function responseMessage(response, fallback) {
         projected tournament winnings, tie-split payouts, mutt multipliers, and
         any recorded first-round leader bonus.
       </p>
+
+      <div v-if="entries.length" class="standings-hero-stats">
+        <div class="group-card standings-stat-card">
+          <span class="status-label">Entries</span>
+          <strong>{{ entries.length }}</strong>
+        </div>
+        <div class="group-card standings-stat-card">
+          <span class="status-label">Results</span>
+          <strong>{{ standings?.result_count ?? 0 }}</strong>
+        </div>
+        <div class="group-card standings-stat-card">
+          <span class="status-label">Average Projected</span>
+          <strong>{{ formatMoney(averageProjectedPayout) }}</strong>
+        </div>
+      </div>
     </div>
 
     <div class="status-card">
@@ -156,6 +181,7 @@ async function responseMessage(response, fallback) {
           v-for="entry in entries"
           :key="entry.entry_id"
           :entry="entry"
+          :auto-expand="entry.rank === 1"
           :format-money="formatMoney"
           :payout-label="payoutLabel"
         />

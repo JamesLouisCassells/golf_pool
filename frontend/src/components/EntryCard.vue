@@ -7,6 +7,10 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  autoExpand: {
+    type: Boolean,
+    default: false,
+  },
   formatMoney: {
     type: Function,
     required: true,
@@ -17,7 +21,7 @@ const props = defineProps({
   },
 })
 
-const expanded = ref(false)
+const expanded = ref(props.autoExpand)
 const pickCount = computed(() => props.entry.picks?.length ?? 0)
 const leadersCount = computed(() =>
   (props.entry.picks ?? []).filter((pick) => {
