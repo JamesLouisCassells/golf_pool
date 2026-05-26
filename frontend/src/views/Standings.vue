@@ -1,5 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import EntryCard from '../components/EntryCard.vue'
+import SideLeaderboard from '../components/SideLeaderboard.vue'
 import { fetchActiveConfig } from '../lib/tournament'
 
 const activeYear = ref('')
@@ -22,6 +24,17 @@ const updatedAtLabel = computed(() => {
 })
 
 const leader = computed(() => entries.value[0] ?? null)
+const topEntries = computed(() => entries.value.slice(0, 5))
+const totalProjectedPayout = computed(() =>
+  entries.value.reduce((total, entry) => total + Number(entry.total_payout ?? 0), 0),
+)
+const averageProjectedPayout = computed(() => {
+  if (entries.value.length === 0) {
+    return 0
+  }
+
+  return Math.round(totalProjectedPayout.value / entries.value.length)
+})
 
 onMounted(async () => {
   await loadStandings()
@@ -101,6 +114,21 @@ async function responseMessage(response, fallback) {
         projected tournament winnings, tie-split payouts, mutt multipliers, and
         any recorded first-round leader bonus.
       </p>
+
+      <div v-if="entries.length" class="standings-hero-stats">
+        <div class="group-card standings-stat-card">
+          <span class="status-label">Entries</span>
+          <strong>{{ entries.length }}</strong>
+        </div>
+        <div class="group-card standings-stat-card">
+          <span class="status-label">Results</span>
+          <strong>{{ standings?.result_count ?? 0 }}</strong>
+        </div>
+        <div class="group-card standings-stat-card">
+          <span class="status-label">Average Projected</span>
+          <strong>{{ formatMoney(averageProjectedPayout) }}</strong>
+        </div>
+      </div>
     </div>
 
     <div class="status-card">
@@ -140,38 +168,24 @@ async function responseMessage(response, fallback) {
       </p>
     </div>
 
-    <div v-else class="entries-grid standings-grid">
-      <article v-for="entry in entries" :key="entry.entry_id" class="group-card entry-card standings-card">
-        <div class="entry-card-head">
-          <div>
-            <p class="card-step">Rank {{ entry.rank }}</p>
-            <h4>{{ entry.display_name }}</h4>
-          </div>
-          <div class="standings-card-total">
-            <span class="badge" :class="entry.in_overs ? 'badge-new' : 'badge-existing'">
-              {{ entry.in_overs ? 'In overs' : 'Standard' }}
-            </span>
-            <p>{{ formatMoney(entry.total_payout) }}</p>
-          </div>
-        </div>
+    <div v-else class="standings-layout">
+      <SideLeaderboard
+        :entries="topEntries"
+        :updated-at-label="updatedAtLabel"
+        :result-count="standings?.result_count ?? 0"
+        :format-money="formatMoney"
+      />
 
-        <div v-if="entry.frl_bonus" class="alert alert-success standings-frl">
-          <p>FRL bonus applied: {{ formatMoney(entry.frl_bonus) }}</p>
-        </div>
-
-        <dl class="pick-list standings-pick-list">
-          <div v-for="pick in entry.picks" :key="`${entry.entry_id}-${pick.group_name}`">
-            <dt>
-              <span>{{ pick.group_name }}</span>
-              <strong>{{ pick.golfer_name }}</strong>
-            </dt>
-            <dd>
-              <span>{{ pick.position || 'No live position yet' }}</span>
-              <span>{{ payoutLabel(pick) }}</span>
-            </dd>
-          </div>
-        </dl>
-      </article>
+      <div class="entries-grid standings-grid">
+        <EntryCard
+          v-for="entry in entries"
+          :key="entry.entry_id"
+          :entry="entry"
+          :auto-expand="entry.rank === 1"
+          :format-money="formatMoney"
+          :payout-label="payoutLabel"
+        />
+      </div>
     </div>
 
     <p v-if="refreshedAt" class="helper-copy standings-refresh-meta">

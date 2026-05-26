@@ -241,6 +241,24 @@ p {
   color: #ffd8c7;
 }
 
+.standings-hero-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.standings-stat-card {
+  display: grid;
+  gap: 8px;
+}
+
+.standings-stat-card strong {
+  font-family: var(--serif);
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
 .section-heading {
   display: flex;
   justify-content: space-between;
@@ -343,6 +361,71 @@ p {
   gap: 16px;
 }
 
+.standings-layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 280px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.side-leaderboard {
+  padding: 18px;
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(22, 37, 31, 0.94), rgba(27, 54, 42, 0.92)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent);
+  color: #f8f5ed;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  position: sticky;
+  top: 24px;
+  display: grid;
+  gap: 18px;
+}
+
+.side-leaderboard-header .kicker,
+.side-leaderboard-meta dt {
+  color: rgba(248, 245, 237, 0.72);
+}
+
+.side-leaderboard-list {
+  display: grid;
+  gap: 10px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.side-leaderboard-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.side-leaderboard-rank {
+  color: rgba(248, 245, 237, 0.72);
+  font-size: 0.8rem;
+  margin-bottom: 4px;
+}
+
+.side-leaderboard-meta {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+
+.side-leaderboard-meta div {
+  display: grid;
+  gap: 4px;
+}
+
+.side-leaderboard-meta dd {
+  margin: 0;
+  font-weight: 600;
+}
+
 .card-step {
   font-family: var(--mono);
   color: var(--green-soft);
@@ -373,6 +456,18 @@ p {
   line-height: 1;
 }
 
+.standings-card-summary {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  color: var(--muted);
+}
+
+.standings-toggle {
+  margin-left: auto;
+}
+
 .standings-frl {
   margin-bottom: 0;
 }
@@ -397,8 +492,53 @@ p {
   text-align: right;
 }
 
+.standings-pick-list-expanded dd {
+  gap: 10px;
+}
+
 .standings-refresh-meta {
   margin-top: 18px;
+}
+
+.golfer-badge {
+  min-width: min(100%, 220px);
+  padding: 10px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  display: grid;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.golfer-badge-leading {
+  background: linear-gradient(135deg, rgba(199, 155, 56, 0.18), rgba(255, 253, 247, 0.92));
+  border-color: rgba(199, 155, 56, 0.32);
+}
+
+.golfer-badge-final {
+  background: rgba(33, 95, 74, 0.08);
+  border-color: rgba(33, 95, 74, 0.2);
+}
+
+.golfer-badge-cut {
+  background: rgba(138, 53, 45, 0.08);
+  border-color: rgba(138, 53, 45, 0.18);
+}
+
+.golfer-badge-live {
+  background: rgba(47, 107, 85, 0.08);
+  border-color: rgba(47, 107, 85, 0.18);
+}
+
+.golfer-badge-position,
+.golfer-badge-score {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.golfer-badge-meta {
+  color: var(--muted);
+  font-size: 0.86rem;
 }
 
 .pick-list {
@@ -577,12 +717,28 @@ textarea:disabled {
     grid-template-columns: 1fr;
   }
 
+  .standings-hero-stats {
+    grid-template-columns: 1fr;
+  }
+
   .entries-grid {
     grid-template-columns: 1fr;
   }
 
+  .standings-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .side-leaderboard {
+    position: static;
+  }
+
   .section-heading {
     flex-direction: column;
+  }
+
+  .standings-toggle {
+    margin-left: 0;
   }
 
   .app-shell {
