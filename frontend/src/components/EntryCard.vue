@@ -1,5 +1,8 @@
 <script setup>
-defineProps({
+import { computed, ref } from 'vue'
+import GolferBadge from './GolferBadge.vue'
+
+const props = defineProps({
   entry: {
     type: Object,
     required: true,
@@ -13,6 +16,15 @@ defineProps({
     required: true,
   },
 })
+
+const expanded = ref(false)
+const pickCount = computed(() => props.entry.picks?.length ?? 0)
+const leadersCount = computed(() =>
+  (props.entry.picks ?? []).filter((pick) => {
+    const position = String(pick.position || '').trim().toUpperCase()
+    return position === '1' || position === 'T1'
+  }).length,
+)
 </script>
 
 <template>
@@ -30,18 +42,26 @@ defineProps({
       </div>
     </div>
 
+    <div class="standings-card-summary">
+      <p>{{ pickCount }} picks tracked</p>
+      <p>{{ leadersCount }} in first</p>
+      <button class="ghost-button standings-toggle" type="button" @click="expanded = !expanded">
+        {{ expanded ? 'Hide details' : 'Show details' }}
+      </button>
+    </div>
+
     <div v-if="entry.frl_bonus" class="alert alert-success standings-frl">
       <p>FRL bonus applied: {{ formatMoney(entry.frl_bonus) }}</p>
     </div>
 
-    <dl class="pick-list standings-pick-list">
+    <dl v-if="expanded" class="pick-list standings-pick-list standings-pick-list-expanded">
       <div v-for="pick in entry.picks" :key="`${entry.entry_id}-${pick.group_name}`">
         <dt>
           <span>{{ pick.group_name }}</span>
           <strong>{{ pick.golfer_name }}</strong>
         </dt>
         <dd>
-          <span>{{ pick.position || 'No live position yet' }}</span>
+          <GolferBadge :pick="pick" />
           <span>{{ payoutLabel(pick) }}</span>
         </dd>
       </div>
