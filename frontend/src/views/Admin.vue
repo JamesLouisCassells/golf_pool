@@ -2,6 +2,7 @@
 import { computed, reactive, ref } from 'vue'
 
 import { apiFetch, responseMessage } from '../lib/api'
+import { isBackendUserLoading } from '../lib/auth'
 import { fetchActiveConfig } from '../lib/tournament'
 
 const currentYear = new Date().getFullYear()
@@ -57,6 +58,7 @@ const operationsForm = reactive({
 const helperMessage = computed(() =>
   'This page now operates tournament config plus active-year entry cleanup while richer admin tooling is still pending.',
 )
+const pageLoading = computed(() => configLoading.value || entriesLoading.value)
 
 loadPage()
 
@@ -475,6 +477,10 @@ function prettyJSON(value) {
       </div>
     </div>
 
+    <div v-if="isBackendUserLoading && pageLoading" class="empty-state">
+      <p>Verifying admin session and loading tournament controls...</p>
+    </div>
+
     <div class="entry-form">
       <div v-if="operationsErrorMessage" class="alert alert-error">
         <p>{{ operationsErrorMessage }}</p>
@@ -676,6 +682,9 @@ function prettyJSON(value) {
 
     <div v-if="entriesErrorMessage" class="alert alert-error">
       <p>{{ entriesErrorMessage }}</p>
+      <div class="inline-actions">
+        <button class="ghost-button" type="button" @click="loadEntries">Try again</button>
+      </div>
     </div>
 
     <div v-if="entriesSuccessMessage" class="alert alert-success">

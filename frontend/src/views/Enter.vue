@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 
 import { apiFetch, responseMessage } from '../lib/api'
+import { authMode, isSignedIn } from '../lib/auth'
 import { fetchActiveConfig } from '../lib/tournament'
 
 const activeYear = ref('')
@@ -72,6 +73,7 @@ const countdown = computed(() => {
 })
 
 const groupSections = computed(() => normalizeGroups(config.value?.groups ?? {}))
+const needsSignIn = computed(() => authMode.value === 'clerk' && !isSignedIn.value)
 
 const submitLabel = computed(() => {
   if (saving.value) {
@@ -92,6 +94,11 @@ async function loadPage() {
     activeYear.value = configPayload.year ?? ''
 
     initializeEmptyPicks(configPayload.groups)
+
+    if (needsSignIn.value) {
+      existingEntry.value = null
+      return
+    }
 
     const entryResponse = await apiFetch('/api/entries/mine')
     if (entryResponse.status === 404) {
@@ -286,8 +293,15 @@ function normalizePlayerOption(player) {
       <p>Loading config and entry data...</p>
     </div>
 
+    <div v-else-if="needsSignIn" class="empty-state">
+      <p>Sign in to load or save your entry.</p>
+    </div>
+
     <div v-else-if="errorMessage" class="alert alert-error">
       <p>{{ errorMessage }}</p>
+      <div class="inline-actions">
+        <button class="ghost-button" type="button" @click="loadPage">Try again</button>
+      </div>
     </div>
 
     <form v-else class="entry-form" @submit.prevent="submitEntry">

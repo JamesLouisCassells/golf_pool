@@ -7,6 +7,7 @@ const clerkSignedIn = ref(false)
 const backendUser = ref(null)
 const backendUserLoaded = ref(false)
 const backendUserLoading = ref(false)
+const backendUserError = ref('')
 
 let tokenGetter = async () => null
 let waiters = []
@@ -27,6 +28,8 @@ export const isSignedIn = computed(() => (mode.value === 'clerk' ? clerkSignedIn
 export const currentBackendUser = computed(() => backendUser.value)
 export const isAdmin = computed(() => Boolean(backendUser.value?.is_admin))
 export const hasBackendUser = computed(() => backendUserLoaded.value)
+export const isBackendUserLoading = computed(() => backendUserLoading.value)
+export const backendUserErrorMessage = computed(() => backendUserError.value)
 
 export function configureAuthMode(nextMode) {
   mode.value = nextMode
@@ -37,6 +40,7 @@ export function configureAuthMode(nextMode) {
     backendUser.value = null
     backendUserLoaded.value = false
     backendUserLoading.value = false
+    backendUserError.value = ''
     tokenGetter = async () => null
     resolveWaiters()
     return
@@ -47,6 +51,7 @@ export function configureAuthMode(nextMode) {
   backendUser.value = null
   backendUserLoaded.value = false
   backendUserLoading.value = false
+  backendUserError.value = ''
 }
 
 export function setTokenGetter(nextGetter) {
@@ -73,6 +78,7 @@ export function clearBackendUser() {
   backendUser.value = null
   backendUserLoaded.value = true
   backendUserLoading.value = false
+  backendUserError.value = ''
   backendUserRequest = null
 }
 
@@ -107,6 +113,7 @@ export async function refreshBackendUser(options = {}) {
   }
 
   backendUserLoading.value = true
+  backendUserError.value = ''
   backendUserRequest = (async () => {
     const response = await apiFetch('/api/me')
 
@@ -122,6 +129,10 @@ export async function refreshBackendUser(options = {}) {
 
   try {
     return await backendUserRequest
+  } catch (error) {
+    backendUserError.value = error instanceof Error ? error.message : 'Failed to load the authenticated user.'
+    backendUserLoaded.value = false
+    throw error
   } finally {
     backendUserLoading.value = false
     backendUserRequest = null
