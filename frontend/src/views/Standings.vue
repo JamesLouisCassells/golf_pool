@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import EntryCard from '../components/EntryCard.vue'
+import SideLeaderboard from '../components/SideLeaderboard.vue'
 import { fetchActiveConfig } from '../lib/tournament'
 
 const activeYear = ref('')
@@ -23,6 +24,7 @@ const updatedAtLabel = computed(() => {
 })
 
 const leader = computed(() => entries.value[0] ?? null)
+const topEntries = computed(() => entries.value.slice(0, 5))
 
 onMounted(async () => {
   await loadStandings()
@@ -141,14 +143,23 @@ async function responseMessage(response, fallback) {
       </p>
     </div>
 
-    <div v-else class="entries-grid standings-grid">
-      <EntryCard
-        v-for="entry in entries"
-        :key="entry.entry_id"
-        :entry="entry"
+    <div v-else class="standings-layout">
+      <SideLeaderboard
+        :entries="topEntries"
+        :updated-at-label="updatedAtLabel"
+        :result-count="standings?.result_count ?? 0"
         :format-money="formatMoney"
-        :payout-label="payoutLabel"
       />
+
+      <div class="entries-grid standings-grid">
+        <EntryCard
+          v-for="entry in entries"
+          :key="entry.entry_id"
+          :entry="entry"
+          :format-money="formatMoney"
+          :payout-label="payoutLabel"
+        />
+      </div>
     </div>
 
     <p v-if="refreshedAt" class="helper-copy standings-refresh-meta">
