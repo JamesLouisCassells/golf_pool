@@ -201,6 +201,40 @@ What is still missing:
 - deployment / CI / infra follow-through
 - polish around loading, error, and mobile states
 
+### Deployment Scaffold
+
+The repo now includes an initial deployment scaffold for the web tier:
+
+- `frontend/Dockerfile` builds the Vue app and serves it from Nginx
+- `frontend/nginx.conf` serves the SPA and proxies `/api/*` plus `/healthz` to the Go API on `127.0.0.1:8080`
+- `deploy/app/` contains a first-pass Kubernetes deployment, service, ingress, namespace, and kustomization
+
+The current manifests are intentionally starter infrastructure, not final production-ready cluster config.
+
+Important placeholders to replace per environment:
+
+- `deploy/app/ingress.yaml`
+  - replace `masters-pool.example.com` with the real host
+  - replace `masters-pool-tls` if your TLS secret name differs
+- `deploy/app/deployment.yaml`
+  - replace the image tags if you are not using `:latest`
+  - confirm the GHCR image paths match the registry owner you will actually publish under
+
+The API deployment also expects a Kubernetes secret named `masters-pool-api-secrets`.
+
+That secret should provide values such as:
+
+- `DATABASE_URL`
+- `CLERK_SECRET_KEY`
+- `CLERK_JWKS_URL`
+- `CLERK_ISSUER`
+- `CLERK_AUTHORIZED_PARTIES`
+- `CLERK_EMAIL_CLAIM`
+- `CLERK_NAME_CLAIM`
+- `CLERK_ADMIN_CLAIM`
+- `CLERK_ADMIN_VALUE`
+- `GOLF_API_KEY`
+
 ### Golf Provider Refresh Setup
 
 The app can now store golfer result snapshots two ways:
