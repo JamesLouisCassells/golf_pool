@@ -7,4 +7,4 @@ resources:
   - web-configmap.yaml
   - deployment.yaml
   - service.yaml
-  - ingress.yaml
+  - httproute.yaml

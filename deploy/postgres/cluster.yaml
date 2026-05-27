@@ -1,0 +1,41 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: masters-pool-postgres
+spec:
+  instances: 1
+
+  storage:
+    size: 10Gi
+
+  bootstrap:
+    initdb:
+      database: golf_pool
+      owner: postgres
+      secret:
+        name: masters-pool-postgres-app
+
+  superuserSecret:
+    name: masters-pool-postgres-superuser
+
+  backup:
+    barmanObjectStore:
+      destinationPath: s3://replace-me-backups/masters-pool-postgres
+      endpointURL: https://s3.us-west-000.backblazeb2.com
+      s3Credentials:
+        accessKeyId:
+          name: masters-pool-b2-credentials
+          key: ACCESS_KEY_ID
+        secretAccessKey:
+          name: masters-pool-b2-credentials
+          key: SECRET_ACCESS_KEY
+      wal:
+        compression: gzip
+      data:
+        compression: gzip
+    retentionPolicy: 30d
+
+  scheduledBackups:
+    - name: daily-backup
+      schedule: "0 3 * * *"
+      backupOwnerReference: self

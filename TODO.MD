@@ -136,11 +136,11 @@ Current priority before more feature work:
 - [ ] Tag with `sha-<short>` and semver from git tags
 
 ### Kubernetes manifests
-- [ ] `deploy/app/deployment.yaml` — two-container pod (Go API + Nginx)
-- [ ] `deploy/app/service.yaml` + `ingress.yaml` — expose to internet with TLS
-- [ ] `deploy/app/configmap.yaml` — Nginx config, `ACTIVE_YEAR`, tournament env vars
-- [ ] Sealed Secret — RapidAPI key, Clerk keys, DB connection string
-- [ ] `deploy/postgres/cluster.yaml` — CNPG cluster with Backblaze B2 backup config
+- [x] `deploy/app/deployment.yaml` — two-container pod (Go API + Nginx)
+- [x] `deploy/app/service.yaml` + Gateway `HTTPRoute` — expose to internet through the shared gateway
+- [x] `deploy/app/configmap.yaml` — Nginx config, `ACTIVE_YEAR`, tournament env vars
+- [x] Sealed Secret shape/example — RapidAPI key, Clerk keys, DB connection string
+- [x] `deploy/postgres/cluster.yaml` — CNPG cluster with Backblaze B2 backup config
 - [ ] Confirm Flux picks up new image tags and deploys cleanly end-to-end
 
 ---

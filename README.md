@@ -207,20 +207,34 @@ The repo now includes an initial deployment scaffold for the web tier:
 
 - `frontend/Dockerfile` builds the Vue app and serves it from Nginx
 - `frontend/nginx.conf` serves the SPA and proxies `/api/*` plus `/healthz` to the Go API on `127.0.0.1:8080`
-- `deploy/app/` contains a first-pass Kubernetes deployment, service, ingress, namespace, and kustomization
+- `deploy/app/` contains a first-pass Kubernetes deployment, service, HTTPRoute, namespace, and kustomization
+- `deploy/postgres/cluster.yaml` contains a first-pass CloudNativePG cluster scaffold with placeholder Backblaze B2 backup wiring
 
 The current manifests are intentionally starter infrastructure, not final production-ready cluster config.
+They now assume a shared Gateway API setup rather than a per-app Ingress resource.
 
-Important placeholders to replace per environment:
+Important placeholders and shared dependencies to replace per environment:
 
-- `deploy/app/ingress.yaml`
+- `deploy/app/httproute.yaml`
   - replace `masters-pool.example.com` with the real host
-  - replace `masters-pool-tls` if your TLS secret name differs
+  - confirm the shared Gateway name, namespace, and listener section match your cluster
 - `deploy/app/deployment.yaml`
   - replace the image tags if you are not using `:latest`
   - confirm the GHCR image paths match the registry owner you will actually publish under
 
+This route shape is intended to match the shared Gateway model used in Dan's `gitops` repo:
+
+- a shared `Gateway` named `main-gateway`
+- Gateway namespace `envoy-gateway-system`
+- app-local `HTTPRoute` resources attaching to the shared HTTPS listener
+
 The API deployment also expects a Kubernetes secret named `masters-pool-api-secrets`.
+
+An example non-production secret manifest lives at:
+
+- `deploy/app/api-secrets.example.yaml`
+
+Use that as a shape reference only. Do not commit real secret values into the repo.
 
 That secret should provide values such as:
 
@@ -234,6 +248,12 @@ That secret should provide values such as:
 - `CLERK_ADMIN_CLAIM`
 - `CLERK_ADMIN_VALUE`
 - `GOLF_API_KEY`
+
+The Postgres scaffold also assumes these secret names exist before the CNPG cluster can be applied cleanly:
+
+- `masters-pool-postgres-app`
+- `masters-pool-postgres-superuser`
+- `masters-pool-b2-credentials`
 
 ### Golf Provider Refresh Setup
 
