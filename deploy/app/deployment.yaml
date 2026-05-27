@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: api
-          image: ghcr.io/jameslouiscassells/masters-pool-api:latest
+          image: ghcr.io/jameslouiscassells/masters-pool-api:latest # {"$imagepolicy": "flux-system:masters-pool-api"}
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
@@ -41,7 +41,7 @@ spec:
               path: /healthz
               port: 8080
         - name: web
-          image: ghcr.io/jameslouiscassells/masters-pool-web:latest
+          image: ghcr.io/jameslouiscassells/masters-pool-web:latest # {"$imagepolicy": "flux-system:masters-pool-web"}
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 80

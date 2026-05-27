@@ -1,0 +1,17 @@
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: masters-pool-api
+  namespace: flux-system
+spec:
+  image: ghcr.io/jameslouiscassells/masters-pool-api
+  interval: 5m
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: masters-pool-web
+  namespace: flux-system
+spec:
+  image: ghcr.io/jameslouiscassells/masters-pool-web
+  interval: 5m

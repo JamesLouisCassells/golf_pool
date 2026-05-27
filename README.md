@@ -210,6 +210,7 @@ The repo now includes an initial deployment scaffold for the web tier:
 - `deploy/app/` contains a first-pass Kubernetes deployment, service, HTTPRoute, namespace, and kustomization
 - `deploy/postgres/cluster.yaml` contains a first-pass CloudNativePG cluster scaffold with placeholder Backblaze B2 backup wiring
 - `.github/workflows/publish-images.yml` builds and publishes the API and web images to GHCR on pushes to `main`
+- `.github/workflows/ci.yml` now also validates that both container images build on pushes and pull requests
 
 The current manifests are intentionally starter infrastructure, not final production-ready cluster config.
 They now assume a shared Gateway API setup rather than a per-app Ingress resource.
@@ -222,12 +223,26 @@ Important placeholders and shared dependencies to replace per environment:
 - `deploy/app/deployment.yaml`
   - replace the image tags if you are not using `:latest`
   - the current scaffold expects images published to `ghcr.io/jameslouiscassells/masters-pool-api` and `ghcr.io/jameslouiscassells/masters-pool-web`
+  - the image lines include Flux `$imagepolicy` comments so the same deployment shape can be copied into Dan's gitops repo without reworking image update markers
 
 This route shape is intended to match the shared Gateway model used in Dan's `gitops` repo:
 
 - a shared `Gateway` named `main-gateway`
 - Gateway namespace `envoy-gateway-system`
 - app-local `HTTPRoute` resources attaching to the shared HTTPS listener
+
+For image automation, the publish workflow now emits three useful tag styles:
+
+- `sha-<shortsha>` for commit tracing
+- `main-<github_run_number>` for Flux-friendly monotonically increasing mainline deploy tags
+- `latest` on `main`, plus semver tags when pushing `v*` git tags
+
+Example Flux image automation resources are included under:
+
+- `deploy/gitops/image-repositories.example.yaml`
+- `deploy/gitops/image-policies.example.yaml`
+
+Those examples assume Dan's gitops repo will watch the `main-*` tags and update the deployment image fields through the `$imagepolicy` comments.
 
 The API deployment also expects a Kubernetes secret named `masters-pool-api-secrets`.
 
