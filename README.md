@@ -196,9 +196,9 @@ What the current frontend does:
 
 What is still missing:
 
-- final end-to-end proof against a real Clerk instance
+- more deploy validation against the target cluster and gitops repo
+- Flux/image automation confirmation end to end
 - more standings UI polish and component cleanup
-- deployment / CI / infra follow-through
 - polish around loading, error, and mobile states
 
 ### Deployment Scaffold
@@ -209,6 +209,7 @@ The repo now includes an initial deployment scaffold for the web tier:
 - `frontend/nginx.conf` serves the SPA and proxies `/api/*` plus `/healthz` to the Go API on `127.0.0.1:8080`
 - `deploy/app/` contains a first-pass Kubernetes deployment, service, HTTPRoute, namespace, and kustomization
 - `deploy/postgres/cluster.yaml` contains a first-pass CloudNativePG cluster scaffold with placeholder Backblaze B2 backup wiring
+- `.github/workflows/publish-images.yml` builds and publishes the API and web images to GHCR on pushes to `main`
 
 The current manifests are intentionally starter infrastructure, not final production-ready cluster config.
 They now assume a shared Gateway API setup rather than a per-app Ingress resource.
@@ -220,7 +221,7 @@ Important placeholders and shared dependencies to replace per environment:
   - confirm the shared Gateway name, namespace, and listener section match your cluster
 - `deploy/app/deployment.yaml`
   - replace the image tags if you are not using `:latest`
-  - confirm the GHCR image paths match the registry owner you will actually publish under
+  - the current scaffold expects images published to `ghcr.io/jameslouiscassells/masters-pool-api` and `ghcr.io/jameslouiscassells/masters-pool-web`
 
 This route shape is intended to match the shared Gateway model used in Dan's `gitops` repo:
 

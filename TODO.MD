@@ -131,9 +131,9 @@ Current priority before more feature work:
 ## Phase 5 — Kubernetes Deploy
 
 ### GitHub Actions CI
-- [ ] Workflow: build and push `masters-pool-api` image to GHCR on push to `main`
-- [ ] Workflow: build and push `masters-pool-web` image to GHCR on push to `main`
-- [ ] Tag with `sha-<short>` and semver from git tags
+- [x] Workflow: build and push `masters-pool-api` image to GHCR on push to `main`
+- [x] Workflow: build and push `masters-pool-web` image to GHCR on push to `main`
+- [x] Tag with `sha-<short>` and semver from git tags
 
 ### Kubernetes manifests
 - [x] `deploy/app/deployment.yaml` — two-container pod (Go API + Nginx)

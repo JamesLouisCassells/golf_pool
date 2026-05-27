@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: api
-          image: ghcr.io/dgunzy/masters-pool-api:latest
+          image: ghcr.io/jameslouiscassells/masters-pool-api:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
@@ -41,7 +41,7 @@ spec:
               path: /healthz
               port: 8080
         - name: web
-          image: ghcr.io/dgunzy/masters-pool-web:latest
+          image: ghcr.io/jameslouiscassells/masters-pool-web:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 80
