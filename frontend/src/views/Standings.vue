@@ -159,6 +159,9 @@ async function responseMessage(response, fallback) {
 
     <div v-else-if="errorMessage" class="alert alert-error">
       <p>{{ errorMessage }}</p>
+      <div class="inline-actions">
+        <button class="ghost-button" type="button" @click="loadStandings()">Try again</button>
+      </div>
     </div>
 
     <div v-else-if="entries.length === 0" class="empty-state">

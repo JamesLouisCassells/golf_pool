@@ -11,6 +11,13 @@ const fallbackRedirectUrl = computed(() => {
   const redirect = route.query.redirect_url
   return typeof redirect === 'string' && redirect.trim() !== '' ? redirect : '/enter'
 })
+const destinationLabel = computed(() =>
+  fallbackRedirectUrl.value === '/admin'
+    ? 'admin controls'
+    : fallbackRedirectUrl.value === '/enter'
+      ? 'your entry'
+      : fallbackRedirectUrl.value,
+)
 </script>
 
 <template>
@@ -21,6 +28,9 @@ const fallbackRedirectUrl = computed(() => {
       <p>
         Clerk is the real browser auth flow for this app. Use it to reach
         protected entry and admin routes without relying on mock auth.
+      </p>
+      <p class="helper-copy">
+        After sign-in, you will be sent to {{ destinationLabel }}.
       </p>
     </div>
 

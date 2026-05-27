@@ -4,7 +4,15 @@ import { useRoute } from 'vue-router'
 import { Show, UserButton } from '@clerk/vue'
 
 import ClerkBridge from './components/ClerkBridge.vue'
-import { authMode, currentBackendUser, isClerkEnabled, isSignedIn } from './lib/auth'
+import {
+  authMode,
+  backendUserErrorMessage,
+  currentBackendUser,
+  isAdmin,
+  isBackendUserLoading,
+  isClerkEnabled,
+  isSignedIn,
+} from './lib/auth'
 
 const route = useRoute()
 
@@ -22,6 +30,26 @@ const authBanner = computed(() => {
   }
 
   return ''
+})
+
+const authStatusLabel = computed(() => {
+  if (!isClerkEnabled.value) {
+    return 'Mock auth compatible'
+  }
+  if (isBackendUserLoading.value) {
+    return 'Loading session'
+  }
+  if (!isSignedIn.value) {
+    return 'Signed out'
+  }
+  if (backendUserErrorMessage.value) {
+    return 'Session needs attention'
+  }
+  if (isAdmin.value) {
+    return 'Admin session'
+  }
+
+  return 'Player session'
 })
 </script>
 
@@ -47,25 +75,30 @@ const authBanner = computed(() => {
         <RouterLink to="/entries" class="nav-link">Entries</RouterLink>
         <RouterLink to="/admin" class="nav-link">Admin</RouterLink>
         <RouterLink to="/standings" class="nav-link">Standings</RouterLink>
-        <RouterLink v-if="authMode === 'clerk' && !isSignedIn" to="/sign-in" class="nav-link">Sign In</RouterLink>
       </nav>
 
       <div class="auth-controls">
+        <div class="auth-chip auth-status-chip">
+          <span>{{ authStatusLabel }}</span>
+        </div>
         <Show v-if="isClerkEnabled" when="signed-in">
           <div class="auth-chip">
-            <span>{{ currentBackendUser?.user?.email ?? 'Signed in' }}</span>
+            <span>{{ currentBackendUser?.user?.email ?? 'Signed in to Clerk' }}</span>
             <UserButton :show-name="true" />
           </div>
         </Show>
         <Show v-if="isClerkEnabled" when="signed-out">
           <RouterLink to="/sign-in" class="nav-link nav-link-ghost">Sign In</RouterLink>
         </Show>
-        <span v-if="!isClerkEnabled" class="badge badge-new">Mock auth compatible</span>
       </div>
     </div>
 
     <div v-if="authBanner" class="alert alert-error app-alert">
       <p>{{ authBanner }}</p>
+    </div>
+
+    <div v-if="backendUserErrorMessage" class="alert alert-error app-alert">
+      <p>{{ backendUserErrorMessage }}</p>
     </div>
 
     <main class="page-grid">

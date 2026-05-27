@@ -2,6 +2,7 @@
 import { computed, reactive, ref } from 'vue'
 
 import { apiFetch, responseMessage } from '../lib/api'
+import { isBackendUserLoading } from '../lib/auth'
 import { fetchActiveConfig } from '../lib/tournament'
 
 const currentYear = new Date().getFullYear()
@@ -55,8 +56,9 @@ const operationsForm = reactive({
 })
 
 const helperMessage = computed(() =>
-  'This page now operates tournament config plus active-year entry cleanup while richer admin tooling is still pending.',
+  'Operate the active tournament year, standings refresh, and entry cleanup from one place.',
 )
+const pageLoading = computed(() => configLoading.value || entriesLoading.value)
 
 loadPage()
 
@@ -454,9 +456,8 @@ function prettyJSON(value) {
       <p class="kicker">Admin Controls</p>
       <h2>Operate the tournament year</h2>
       <p>
-        This route now covers both year config and active-year entries. It is
-        still built for mock-admin use right now, with real Clerk admin state
-        to follow later.
+        This route now covers tournament config, standings operations, and
+        active-year entry management behind the real Clerk-backed admin guard.
       </p>
     </div>
 
@@ -473,6 +474,10 @@ function prettyJSON(value) {
         <p class="kicker">Tournament Operations</p>
         <h3>Refresh standings data or lock the field</h3>
       </div>
+    </div>
+
+    <div v-if="isBackendUserLoading && pageLoading" class="empty-state">
+      <p>Verifying admin session and loading tournament controls...</p>
     </div>
 
     <div class="entry-form">
@@ -652,8 +657,8 @@ function prettyJSON(value) {
 
       <div class="form-footer">
         <p class="helper-copy">
-          Save will call the admin-only backend route. With mock auth, this page
-          requires `MOCK_AUTH_ADMIN=true` in your local environment.
+          Save will call the admin-only backend route and either update the
+          active year or seed a missing year if needed.
         </p>
 
         <button class="submit-button" type="button" :disabled="configSaving || configLoading" @click="saveConfig">
@@ -676,6 +681,9 @@ function prettyJSON(value) {
 
     <div v-if="entriesErrorMessage" class="alert alert-error">
       <p>{{ entriesErrorMessage }}</p>
+      <div class="inline-actions">
+        <button class="ghost-button" type="button" @click="loadEntries">Try again</button>
+      </div>
     </div>
 
     <div v-if="entriesSuccessMessage" class="alert alert-success">

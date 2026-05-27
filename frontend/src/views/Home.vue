@@ -1,21 +1,21 @@
 <template>
   <section class="panel hero-panel">
     <div class="hero-copy">
-      <p class="kicker">Current Frontend Phase</p>
-      <h2>App shell is in place</h2>
+      <p class="kicker">Current Frontend State</p>
+      <h2>The pool is running through real routes now</h2>
       <p>
-        The project now has a real navigation spine. Entry creation and editing
-        live behind the <strong>/enter</strong> route, and the remaining pages
-        can be added without another frontend rewrite.
+        The app now runs on the real Go API with Clerk-backed protected routes,
+        live standings, admin tournament controls, and a routed Vue shell that
+        behaves like an actual product instead of a scaffold.
       </p>
     </div>
 
     <div class="status-card">
-      <p class="status-label">What Works</p>
-      <p class="status-value">Router + entry workflow</p>
+      <p class="status-label">Ready To Use</p>
+      <p class="status-value">Entries, standings, and admin flow</p>
       <p class="status-meta">
-        This is the point where the app stops being a single mounted demo page
-        and starts behaving like a real frontend.
+        The main gap now is polish and deployment follow-through, not core app
+        structure.
       </p>
     </div>
   </section>
@@ -23,37 +23,37 @@
   <section class="panel">
     <div class="section-heading">
       <div>
-        <p class="kicker">Next Slices</p>
-        <h3>Where the frontend goes from here</h3>
+        <p class="kicker">Working Areas</p>
+        <h3>What each route is for right now</h3>
       </div>
-      <span class="badge badge-new">Intentional placeholders</span>
+      <span class="badge badge-existing">Live frontend surface</span>
     </div>
 
     <div class="home-grid">
       <article class="group-card">
         <p class="card-step">1</p>
-        <h4>Standings integration</h4>
+        <h4>Standings</h4>
         <p>
-          Wire the future standings route to live data once the backend endpoint
-          exists.
+          Read the live leaderboard feed with expandable entry detail and
+          side-panel summary.
         </p>
       </article>
 
       <article class="group-card">
         <p class="card-step">2</p>
-        <h4>Browser auth state</h4>
+        <h4>Entry flow</h4>
         <p>
-          Replace mock assumptions with real Clerk state when the auth frontend
-          work is ready.
+          Create or edit a personal ticket through the real protected API route
+          before the deadline closes.
         </p>
       </article>
 
       <article class="group-card">
         <p class="card-step">3</p>
-        <h4>Shared page structure</h4>
+        <h4>Admin controls</h4>
         <p>
-          Add entries, admin, and navigation polish on top of the router spine
-          instead of hardwiring more pages into the root component.
+          Operate the active tournament year, standings refresh, entry cleanup,
+          and locking controls.
         </p>
       </article>
     </div>

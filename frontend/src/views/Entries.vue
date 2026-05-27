@@ -1,9 +1,19 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
 const loading = ref(true)
 const errorMessage = ref('')
 const entries = ref([])
+const entriesVisible = ref(true)
+const inOversCount = computed(() => entries.value.filter((entry) => entry.in_overs).length)
+
+const helperTitle = computed(() => {
+  if (!entriesVisible.value) {
+    return 'Entries stay private until the tournament starts'
+  }
+
+  return `${entries.length} submissions loaded`
+})
 
 onMounted(async () => {
   await loadEntries()
@@ -15,10 +25,17 @@ async function loadEntries() {
 
   try {
     const response = await fetch('/api/entries')
+    if (response.status === 403) {
+      entriesVisible.value = false
+      errorMessage.value = ''
+      return
+    }
+
     if (!response.ok) {
       throw new Error(await responseMessage(response, 'Failed to load entries.'))
     }
 
+    entriesVisible.value = true
     entries.value = await response.json()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : 'Something went wrong while loading entries.'
@@ -43,13 +60,28 @@ async function responseMessage(response, fallback) {
         stays simple for now: once the tournament has started, the community can
         see who submitted and what each ticket looks like.
       </p>
+
+      <div v-if="entriesVisible && entries.length" class="standings-hero-stats">
+        <div class="group-card standings-stat-card">
+          <span class="status-label">Entries</span>
+          <strong>{{ entries.length }}</strong>
+        </div>
+        <div class="group-card standings-stat-card">
+          <span class="status-label">In overs</span>
+          <strong>{{ inOversCount }}</strong>
+        </div>
+        <div class="group-card standings-stat-card">
+          <span class="status-label">Standard</span>
+          <strong>{{ entries.length - inOversCount }}</strong>
+        </div>
+      </div>
     </div>
 
     <div class="status-card">
       <p class="status-label">Data Source</p>
       <p class="status-value">`GET /api/entries`</p>
       <p class="status-meta">
-        The backend keeps this hidden until the active tournament start date.
+        {{ entriesVisible ? 'The backend reveals this once the tournament starts.' : 'The backend is still holding the field private.' }}
       </p>
     </div>
   </section>
@@ -58,8 +90,11 @@ async function responseMessage(response, fallback) {
     <div class="section-heading">
       <div>
         <p class="kicker">Active Year Entries</p>
-        <h3>{{ entries.length }} submissions loaded</h3>
+        <h3>{{ helperTitle }}</h3>
       </div>
+      <button class="ghost-button" type="button" :disabled="loading" @click="loadEntries">
+        Reload
+      </button>
     </div>
 
     <div v-if="loading" class="empty-state">
@@ -68,6 +103,13 @@ async function responseMessage(response, fallback) {
 
     <div v-else-if="errorMessage" class="alert alert-error">
       <p>{{ errorMessage }}</p>
+      <div class="inline-actions">
+        <button class="ghost-button" type="button" @click="loadEntries">Try again</button>
+      </div>
+    </div>
+
+    <div v-else-if="!entriesVisible" class="empty-state">
+      <p>The field is still private because the active tournament has not started yet.</p>
     </div>
 
     <div v-else-if="entries.length === 0" class="empty-state">
