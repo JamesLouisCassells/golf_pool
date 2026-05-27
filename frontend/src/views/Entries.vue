@@ -5,6 +5,7 @@ const loading = ref(true)
 const errorMessage = ref('')
 const entries = ref([])
 const entriesVisible = ref(true)
+const inOversCount = computed(() => entries.value.filter((entry) => entry.in_overs).length)
 
 const helperTitle = computed(() => {
   if (!entriesVisible.value) {
@@ -59,6 +60,21 @@ async function responseMessage(response, fallback) {
         stays simple for now: once the tournament has started, the community can
         see who submitted and what each ticket looks like.
       </p>
+
+      <div v-if="entriesVisible && entries.length" class="standings-hero-stats">
+        <div class="group-card standings-stat-card">
+          <span class="status-label">Entries</span>
+          <strong>{{ entries.length }}</strong>
+        </div>
+        <div class="group-card standings-stat-card">
+          <span class="status-label">In overs</span>
+          <strong>{{ inOversCount }}</strong>
+        </div>
+        <div class="group-card standings-stat-card">
+          <span class="status-label">Standard</span>
+          <strong>{{ entries.length - inOversCount }}</strong>
+        </div>
+      </div>
     </div>
 
     <div class="status-card">
