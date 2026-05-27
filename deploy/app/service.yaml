@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: masters-pool-service
+  labels:
+    app.kubernetes.io/name: masters-pool
+spec:
+  selector:
+    app.kubernetes.io/name: masters-pool
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
