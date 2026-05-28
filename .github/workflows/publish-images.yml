@@ -8,6 +8,10 @@ on:
       - "v*"
   workflow_dispatch:
 
+concurrency:
+  group: publish-images-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   packages: write
@@ -37,6 +41,7 @@ jobs:
           images: ghcr.io/jameslouiscassells/masters-pool-api
           tags: |
             type=sha,format=short,prefix=sha-
+            type=raw,value=main-${{ github.run_number }},enable={{is_default_branch}}
             type=raw,value=latest,enable={{is_default_branch}}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -74,6 +79,7 @@ jobs:
           images: ghcr.io/jameslouiscassells/masters-pool-web
           tags: |
             type=sha,format=short,prefix=sha-
+            type=raw,value=main-${{ github.run_number }},enable={{is_default_branch}}
             type=raw,value=latest,enable={{is_default_branch}}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}

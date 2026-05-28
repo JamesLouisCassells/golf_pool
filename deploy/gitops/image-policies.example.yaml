@@ -1,0 +1,29 @@
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: masters-pool-api
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: masters-pool-api
+  filterTags:
+    pattern: "^main-(?P<run>[0-9]+)$"
+    extract: "$run"
+  policy:
+    numerical:
+      order: asc
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: masters-pool-web
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: masters-pool-web
+  filterTags:
+    pattern: "^main-(?P<run>[0-9]+)$"
+    extract: "$run"
+  policy:
+    numerical:
+      order: asc
