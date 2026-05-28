@@ -241,8 +241,10 @@ Example Flux image automation resources are included under:
 
 - `deploy/gitops/image-repositories.example.yaml`
 - `deploy/gitops/image-policies.example.yaml`
+- `deploy/gitops/HANDOFF.md`
 
 Those examples assume Dan's gitops repo will watch the `main-*` tags and update the deployment image fields through the `$imagepolicy` comments.
+`deploy/gitops/HANDOFF.md` is the concrete copy/replace/verify checklist for moving this app into the real cluster repo.
 
 The API deployment also expects a Kubernetes secret named `masters-pool-api-secrets`.
 
