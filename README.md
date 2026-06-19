@@ -18,7 +18,7 @@ The repository currently has:
 - an admin config form backed by admin-only config endpoints
 - a live standings endpoint plus a first pass standings page backed by stored golfer result snapshots
 
-This is no longer just scaffold state, but it is still incomplete. Real provider ingestion for live standings, final Clerk proof cleanup, and deployment are still pending.
+This is no longer just scaffold state, but it is still incomplete. Real Clerk sign-in, local user synchronization, authenticated entry creation, role enforcement, and admin access have been proven locally. Provider ingestion validation and deployment are still pending.
 
 ## Repository Structure
 
