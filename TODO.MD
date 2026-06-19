@@ -46,7 +46,7 @@ Current priority before more feature work:
 - finish real local Clerk configuration
 - run the first browser sign-in proof with `MOCK_AUTH_ENABLED=false`
 - verify `/api/me`, `/enter`, and `/admin` against a live Clerk session
-- current checkpoint: backend starts cleanly against Postgres with real Clerk env values, but the protected-route proof has not been completed yet
+- current checkpoint: real Clerk sign-in, local user sync, authenticated entry creation, non-admin blocking, and admin access have been proven locally
 
 ### Postgres + migrations
 - [x] Install `golang-migrate` CLI
@@ -68,10 +68,10 @@ Current priority before more feature work:
 - [ ] Add custom Clerk session claims for email, display name, and admin role/flag
 - [ ] Update backend auth docs/config assumptions so Clerk Backend API lookup is fallback-only
 - [x] Turn off mock auth locally for the live proof (`MOCK_AUTH_ENABLED=false`)
-- [ ] Test end-to-end with a real Clerk browser session and confirm local `users` upsert
-- [ ] Confirm signed-in users can load `/enter` and save through the real Clerk session
-- [ ] Confirm non-admin users are blocked from `/admin`
-- [ ] Confirm admin users can load `/admin`
+- [x] Test end-to-end with a real Clerk browser session and confirm local `users` upsert
+- [x] Confirm signed-in users can load `/enter` and save through the real Clerk session
+- [x] Confirm non-admin users are blocked from `/admin`
+- [x] Confirm admin users can load `/admin`
 - [ ] Clean up local run instructions and shell-safe env examples after the first live proof
 - [x] Make sure protected frontend requests use the real Clerk session instead of mock auth
 - [x] On authenticated API requests, upsert a `users` row using the Clerk user ID and email
